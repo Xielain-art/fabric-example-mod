@@ -23,20 +23,25 @@ public final class ZoneCreateCommand {
                         .executes(context -> {
                             String id = StringArgumentType.getString(context, "id");
 
+                            storage.reload();
+
                             if (storage.exists(id)) {
                                 CommandFeedback.error(context.getSource(), "Zone already exists: " + id);
                                 return 0;
                             }
 
+                            ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+
                             try {
-                                ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
                                 Zone zone = WorldEditSelectionReader.readSelection(player, id);
 
                                 storage.addZone(zone);
+                                storage.reload();
 
                                 CommandFeedback.send(context.getSource(), "Created zone '" + id + "' from WorldEdit selection.");
                                 CommandFeedback.send(context.getSource(), "Saved to config/gerbarium/regions.json");
-                                CommandFeedback.send(context.getSource(), "Use /gerb zone info " + id + " to inspect it.");
+                                CommandFeedback.send(context.getSource(), "Use /gerb zone gui " + id + " to edit it.");
+
                                 return 1;
                             } catch (IncompleteRegionException e) {
                                 CommandFeedback.error(context.getSource(), "Selection is incomplete. Use //wand and select pos1/pos2 first.");

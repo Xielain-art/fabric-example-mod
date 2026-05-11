@@ -11,9 +11,12 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.EntityType;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
+import net.minecraft.world.World;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -21,29 +24,48 @@ import java.util.List;
 import java.util.Optional;
 
 public final class GerbariumServerNetworking {
-    private static final ZoneStorage STORAGE = new ZoneStorage();
+    private static final ZoneStorage STORAGE = ZoneStorage.getInstance();
     private static final int MAX_STRING_LENGTH = 262144;
 
     private GerbariumServerNetworking() {
     }
 
     public static void register() {
+        registerRequestZones();
+        registerRequestEntities();
+        registerAddMobRule();
+        registerRemoveMobRule();
+        registerToggleZone();
+        registerSelectZone();
+        registerDeselectZone();
+        registerDeleteZone();
+        registerTpToZone();
+    }
+
+    private static void registerRequestZones() {
         ServerPlayNetworking.registerGlobalReceiver(GerbariumPackets.REQUEST_ZONES, (server, player, handler, buf, responseSender) -> {
             server.execute(() -> {
-                if (!hasAccess(player)) return;
+                if (!hasAccess(player)) {
+                    return;
+                }
 
                 STORAGE.reload();
                 sendZones(player);
             });
         });
+    }
 
+    private static void registerRequestEntities() {
         ServerPlayNetworking.registerGlobalReceiver(GerbariumPackets.REQUEST_ENTITIES, (server, player, handler, buf, responseSender) -> {
             server.execute(() -> {
-                if (!hasAccess(player)) return;
+                if (!hasAccess(player)) {
+                    return;
+                }
 
                 Registry<EntityType<?>> registry = server.getRegistryManager().get(RegistryKeys.ENTITY_TYPE);
 
                 List<String> ids = new ArrayList<>();
+
                 for (Identifier id : registry.getIds()) {
                     ids.add(id.toString());
                 }
@@ -60,7 +82,9 @@ public final class GerbariumServerNetworking {
                 ServerPlayNetworking.send(player, GerbariumPackets.SYNC_ENTITIES, response);
             });
         });
+    }
 
+    private static void registerAddMobRule() {
         ServerPlayNetworking.registerGlobalReceiver(GerbariumPackets.ADD_MOB_RULE, (server, player, handler, buf, responseSender) -> {
             String zoneId = buf.readString(256);
             String ruleId = buf.readString(256);
@@ -71,15 +95,19 @@ public final class GerbariumServerNetworking {
             double chance = buf.readDouble();
 
             server.execute(() -> {
-                if (!hasAccess(player)) return;
+                if (!hasAccess(player)) {
+                    return;
+                }
 
                 Identifier entityId = Identifier.tryParse(entityIdRaw);
+
                 if (entityId == null) {
                     CommandFeedback.error(player.getCommandSource(), "Invalid entity id: " + entityIdRaw);
                     return;
                 }
 
                 Registry<EntityType<?>> registry = server.getRegistryManager().get(RegistryKeys.ENTITY_TYPE);
+
                 if (!registry.containsId(entityId)) {
                     CommandFeedback.error(player.getCommandSource(), "Unknown entity id: " + entityId);
                     return;
@@ -98,64 +126,94 @@ public final class GerbariumServerNetworking {
                 STORAGE.reload();
 
                 Optional<Zone> optionalZone = STORAGE.findZone(zoneId);
+
                 if (optionalZone.isEmpty()) {
                     CommandFeedback.error(player.getCommandSource(), "Zone not found: " + zoneId);
+                    sendZones(player);
                     return;
                 }
 
                 Zone zone = optionalZone.get();
+
+                if (zone.mobs == null) {
+                    CommandFeedback.error(player.getCommandSource(), "Zone mob list is null. Reload or recreate zone.");
+                    sendZones(player);
+                    return;
+                }
 
                 zone.mobs.removeIf(rule -> ruleId.equalsIgnoreCase(rule.id));
                 zone.mobs.add(new MobRule(ruleId, entityId.toString(), maxAlive, spawnCount, respawnSeconds, chance));
 
                 STORAGE.save();
+                STORAGE.reload();
 
                 CommandFeedback.send(player.getCommandSource(), "Saved mob rule '" + ruleId + "' in zone '" + zoneId + "'.");
                 sendZones(player);
             });
         });
+    }
 
+    private static void registerRemoveMobRule() {
         ServerPlayNetworking.registerGlobalReceiver(GerbariumPackets.REMOVE_MOB_RULE, (server, player, handler, buf, responseSender) -> {
             String zoneId = buf.readString(256);
             String ruleId = buf.readString(256);
 
             server.execute(() -> {
-                if (!hasAccess(player)) return;
+                if (!hasAccess(player)) {
+                    return;
+                }
 
                 STORAGE.reload();
 
                 Optional<Zone> optionalZone = STORAGE.findZone(zoneId);
+
                 if (optionalZone.isEmpty()) {
                     CommandFeedback.error(player.getCommandSource(), "Zone not found: " + zoneId);
+                    sendZones(player);
                     return;
                 }
 
                 Zone zone = optionalZone.get();
+
+                if (zone.mobs == null || zone.mobs.isEmpty()) {
+                    CommandFeedback.error(player.getCommandSource(), "No mob rules in zone: " + zoneId);
+                    sendZones(player);
+                    return;
+                }
+
                 boolean removed = zone.mobs.removeIf(rule -> ruleId.equalsIgnoreCase(rule.id));
 
                 if (!removed) {
                     CommandFeedback.error(player.getCommandSource(), "Mob rule not found: " + ruleId);
+                    sendZones(player);
                     return;
                 }
 
                 STORAGE.save();
+                STORAGE.reload();
 
                 CommandFeedback.send(player.getCommandSource(), "Removed mob rule '" + ruleId + "' from zone '" + zoneId + "'.");
                 sendZones(player);
             });
         });
+    }
 
+    private static void registerToggleZone() {
         ServerPlayNetworking.registerGlobalReceiver(GerbariumPackets.TOGGLE_ZONE, (server, player, handler, buf, responseSender) -> {
             String zoneId = buf.readString(256);
 
             server.execute(() -> {
-                if (!hasAccess(player)) return;
+                if (!hasAccess(player)) {
+                    return;
+                }
 
                 STORAGE.reload();
 
                 Optional<Zone> optionalZone = STORAGE.findZone(zoneId);
+
                 if (optionalZone.isEmpty()) {
                     CommandFeedback.error(player.getCommandSource(), "Zone not found: " + zoneId);
+                    sendZones(player);
                     return;
                 }
 
@@ -163,32 +221,132 @@ public final class GerbariumServerNetworking {
                 zone.enabled = !zone.enabled;
 
                 STORAGE.save();
+                STORAGE.reload();
 
                 CommandFeedback.send(player.getCommandSource(), "Zone '" + zoneId + "' is now " + (zone.enabled ? "enabled" : "disabled") + ".");
                 sendZones(player);
             });
         });
+    }
 
+    private static void registerSelectZone() {
         ServerPlayNetworking.registerGlobalReceiver(GerbariumPackets.SELECT_ZONE, (server, player, handler, buf, responseSender) -> {
             String zoneId = buf.readString(256);
 
             server.execute(() -> {
-                if (!hasAccess(player)) return;
+                if (!hasAccess(player)) {
+                    return;
+                }
 
                 STORAGE.reload();
 
                 Optional<Zone> optionalZone = STORAGE.findZone(zoneId);
+
                 if (optionalZone.isEmpty()) {
                     CommandFeedback.error(player.getCommandSource(), "Zone not found: " + zoneId);
+                    sendZones(player);
                     return;
                 }
 
                 try {
+                    WorldEditSelectionReader.clearSelection(player);
                     WorldEditSelectionReader.applySelection(player, optionalZone.get());
+
                     CommandFeedback.send(player.getCommandSource(), "Selected zone in WorldEdit: " + zoneId);
                 } catch (Exception e) {
                     CommandFeedback.error(player.getCommandSource(), "Failed to select zone: " + e.getMessage());
                 }
+            });
+        });
+    }
+
+    private static void registerDeselectZone() {
+        ServerPlayNetworking.registerGlobalReceiver(GerbariumPackets.DESELECT_ZONE, (server, player, handler, buf, responseSender) -> {
+            server.execute(() -> {
+                if (!hasAccess(player)) {
+                    return;
+                }
+
+                try {
+                    WorldEditSelectionReader.clearSelection(player);
+                    CommandFeedback.send(player.getCommandSource(), "WorldEdit selection cleared.");
+                } catch (Exception e) {
+                    CommandFeedback.error(player.getCommandSource(), "Failed to clear selection: " + e.getMessage());
+                }
+            });
+        });
+    }
+
+    private static void registerDeleteZone() {
+        ServerPlayNetworking.registerGlobalReceiver(GerbariumPackets.DELETE_ZONE, (server, player, handler, buf, responseSender) -> {
+            String zoneId = buf.readString(256);
+
+            server.execute(() -> {
+                if (!hasAccess(player)) {
+                    return;
+                }
+
+                STORAGE.reload();
+
+                boolean deleted = STORAGE.deleteZone(zoneId);
+
+                if (!deleted) {
+                    CommandFeedback.error(player.getCommandSource(), "Zone not found: " + zoneId);
+                    sendZones(player);
+                    return;
+                }
+
+                STORAGE.reload();
+
+                CommandFeedback.send(player.getCommandSource(), "Deleted zone: " + zoneId);
+                sendZones(player);
+            });
+        });
+    }
+
+    private static void registerTpToZone() {
+        ServerPlayNetworking.registerGlobalReceiver(GerbariumPackets.TP_TO_ZONE, (server, player, handler, buf, responseSender) -> {
+            String zoneId = buf.readString(256);
+
+            server.execute(() -> {
+                if (!hasAccess(player)) {
+                    return;
+                }
+
+                STORAGE.reload();
+
+                Optional<Zone> optionalZone = STORAGE.findZone(zoneId);
+
+                if (optionalZone.isEmpty()) {
+                    CommandFeedback.error(player.getCommandSource(), "Zone not found: " + zoneId);
+                    sendZones(player);
+                    return;
+                }
+
+                Zone zone = optionalZone.get();
+
+                Identifier dimensionId = Identifier.tryParse(zone.dimension);
+
+                if (dimensionId == null) {
+                    CommandFeedback.error(player.getCommandSource(), "Invalid zone dimension: " + zone.dimension);
+                    return;
+                }
+
+                RegistryKey<World> worldKey = RegistryKey.of(RegistryKeys.WORLD, dimensionId);
+                ServerWorld world = server.getWorld(worldKey);
+
+                if (world == null) {
+                    CommandFeedback.error(player.getCommandSource(), "World not loaded: " + zone.dimension);
+                    return;
+                }
+
+                double x = (zone.min.x + zone.max.x) / 2.0 + 0.5;
+                double y = zone.max.y + 2.0;
+                double z = (zone.min.z + zone.max.z) / 2.0 + 0.5;
+
+                player.teleport(world, x, y, z, player.getYaw(), player.getPitch());
+
+                CommandFeedback.send(player.getCommandSource(), "Teleported to zone: " + zone.id);
             });
         });
     }

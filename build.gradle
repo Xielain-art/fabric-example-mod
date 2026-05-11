@@ -17,9 +17,21 @@ repositories {
 		name = "EngineHub"
 		url = "https://maven.enginehub.org/repo/"
 	}
+
 	maven {
 		name = "WispForest"
 		url = "https://maven.wispforest.io/releases/"
+	}
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"gerbarium_regions_bridge" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
 	}
 }
 
@@ -30,8 +42,10 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-	// WorldEdit API. Сам WorldEdit уже стоит отдельным модом на сервере.
+	// WorldEdit API. Сам WorldEdit уже стоит отдельным модом на сервере/клиенте как мод.
 	modCompileOnly "com.sk89q.worldedit:worldedit-fabric-mc1.20:7.2.15"
+
+	// GUI / client-server helper lib
 	modImplementation "io.wispforest:owo-lib:0.11.2+1.20"
 }
 

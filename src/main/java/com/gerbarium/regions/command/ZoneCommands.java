@@ -10,7 +10,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import static net.minecraft.server.command.CommandManager.literal;
 
 public class ZoneCommands {
-    private static final ZoneStorage STORAGE = new ZoneStorage();
+    private static final ZoneStorage STORAGE = ZoneStorage.getInstance();
 
     public static void register() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(

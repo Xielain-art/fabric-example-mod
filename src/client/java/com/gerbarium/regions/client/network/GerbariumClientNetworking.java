@@ -95,4 +95,29 @@ public final class GerbariumClientNetworking {
 
         ClientPlayNetworking.send(GerbariumPackets.SELECT_ZONE, buf);
     }
+
+    public static void deselectZone() {
+        ClientPlayNetworking.send(GerbariumPackets.DESELECT_ZONE, PacketByteBufs.empty());
+    }
+
+    public static void deleteZone(String zoneId) {
+        preferredZoneId = "";
+
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeString(zoneId, 256);
+
+        ClientPlayNetworking.send(GerbariumPackets.DELETE_ZONE, buf);
+    }
+
+    public static void tpToZone(String zoneId) {
+        PacketByteBuf buf = PacketByteBufs.create();
+
+        buf.writeString(zoneId, 256);
+
+        ClientPlayNetworking.send(GerbariumPackets.TP_TO_ZONE, buf);
+    }
+
+    public static void setPreferredZoneId(String zoneId) {
+        preferredZoneId = zoneId == null ? "" : zoneId;
+    }
 }

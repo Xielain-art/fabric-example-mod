@@ -14,8 +14,13 @@ public final class GerbariumPackets {
 
     public static final Identifier ADD_MOB_RULE = new Identifier(GerbariumRegionsBridge.MOD_ID, "add_mob_rule");
     public static final Identifier REMOVE_MOB_RULE = new Identifier(GerbariumRegionsBridge.MOD_ID, "remove_mob_rule");
+
     public static final Identifier TOGGLE_ZONE = new Identifier(GerbariumRegionsBridge.MOD_ID, "toggle_zone");
     public static final Identifier SELECT_ZONE = new Identifier(GerbariumRegionsBridge.MOD_ID, "select_zone");
+    public static final Identifier DESELECT_ZONE = new Identifier(GerbariumRegionsBridge.MOD_ID, "deselect_zone");
+
+    public static final Identifier DELETE_ZONE = new Identifier(GerbariumRegionsBridge.MOD_ID, "delete_zone");
+    public static final Identifier TP_TO_ZONE = new Identifier(GerbariumRegionsBridge.MOD_ID, "tp_to_zone");
 
     private GerbariumPackets() {
     }

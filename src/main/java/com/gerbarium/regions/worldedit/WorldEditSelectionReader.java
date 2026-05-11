@@ -55,4 +55,17 @@ public class WorldEditSelectionReader {
 
         session.dispatchCUISelection(worldEditPlayer);
     }
+
+    public static void clearSelection(ServerPlayerEntity player) {
+        com.sk89q.worldedit.entity.Player worldEditPlayer = FabricAdapter.adaptPlayer(player);
+
+        LocalSession session = WorldEdit.getInstance()
+                .getSessionManager()
+                .get(worldEditPlayer);
+
+        CuboidRegionSelector selector = new CuboidRegionSelector(worldEditPlayer.getWorld());
+
+        session.setRegionSelector(worldEditPlayer.getWorld(), selector);
+        session.dispatchCUISelection(worldEditPlayer);
+    }
 }
