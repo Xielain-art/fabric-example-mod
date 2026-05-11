@@ -1,6 +1,7 @@
 package com.gerbarium.regions.model;
 
 public class MobRule {
+    public String id;
     public String entity;
     public int maxAlive;
     public int spawnCount;
@@ -10,7 +11,8 @@ public class MobRule {
     public MobRule() {
     }
 
-    public MobRule(String entity, int maxAlive, int spawnCount, int respawnSeconds, double chance) {
+    public MobRule(String id, String entity, int maxAlive, int spawnCount, int respawnSeconds, double chance) {
+        this.id = id;
         this.entity = entity;
         this.maxAlive = maxAlive;
         this.spawnCount = spawnCount;

@@ -1,24 +1,28 @@
 {
-	"schemaVersion": 1,
-	"id": "gerbarium_regions_bridge",
-	"version": "${version}",
-	"name": "Gerbarium Regions Bridge",
-	"description": "Server-side bridge mod for Gerbarium region workflow.",
-	"authors": [
-		"Gerbarium Team"
-	],
-	"contact": {},
-	"license": "All-Rights-Reserved",
-	"environment": "server",
-	"entrypoints": {
-		"main": [
-			"com.gerbarium.regions.GerbariumRegionsBridge"
-		]
-	},
-	"depends": {
-		"fabricloader": ">=0.15.0",
-		"minecraft": "1.20.1",
-		"fabric-api": "*",
-		"worldedit": "*"
-	}
+  "schemaVersion": 1,
+  "id": "gerbarium_regions_bridge",
+  "version": "${version}",
+  "name": "Gerbarium Regions Bridge",
+  "description": "WorldEdit regions bridge and admin GUI for Gerbarium.",
+  "authors": [
+    "Gerbarium Team"
+  ],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.gerbarium.regions.GerbariumRegionsBridge"
+    ],
+    "client": [
+      "com.gerbarium.regions.client.GerbariumRegionsBridgeClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "1.20.1",
+    "fabric-api": "*",
+    "worldedit": "*",
+    "owo": "*"
+  }
 }

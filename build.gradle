@@ -17,6 +17,10 @@ repositories {
 		name = "EngineHub"
 		url = "https://maven.enginehub.org/repo/"
 	}
+	maven {
+		name = "WispForest"
+		url = "https://maven.wispforest.io/releases/"
+	}
 }
 
 dependencies {
@@ -28,6 +32,7 @@ dependencies {
 
 	// WorldEdit API. Сам WorldEdit уже стоит отдельным модом на сервере.
 	modCompileOnly "com.sk89q.worldedit:worldedit-fabric-mc1.20:7.2.15"
+	modImplementation "io.wispforest:owo-lib:0.11.2+1.20"
 }
 
 processResources {

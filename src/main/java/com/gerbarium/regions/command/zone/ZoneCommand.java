@@ -1,10 +1,15 @@
 package com.gerbarium.regions.command.zone;
 
+import com.gerbarium.regions.command.CommandFeedback;
 import com.gerbarium.regions.command.HelpCommand;
+import com.gerbarium.regions.network.GerbariumServerNetworking;
 import com.gerbarium.regions.storage.ZoneStorage;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.server.network.ServerPlayerEntity;
 
+import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 
 public final class ZoneCommand {
@@ -15,10 +20,27 @@ public final class ZoneCommand {
         return literal("zone")
                 .executes(HelpCommand::executeZoneHelp)
 
+                .then(literal("gui")
+                        .then(argument("id", StringArgumentType.word())
+                                .executes(context -> {
+                                    String id = StringArgumentType.getString(context, "id");
+
+                                    if (storage.findZone(id).isEmpty()) {
+                                        CommandFeedback.error(context.getSource(), "Zone not found: " + id);
+                                        return 0;
+                                    }
+
+                                    ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+                                    GerbariumServerNetworking.openGui(player, id);
+                                    return 1;
+                                })
+                        )
+                )
+
                 .then(literal("reload")
                         .executes(context -> {
                             storage.reload();
-                            com.gerbarium.regions.command.CommandFeedback.send(
+                            CommandFeedback.send(
                                     context.getSource(),
                                     "Gerbarium zones reloaded from config/gerbarium/regions.json."
                             );
@@ -32,21 +54,20 @@ public final class ZoneCommand {
                 .then(ZoneSelectCommand.build(storage))
                 .then(ZoneToggleCommand.buildEnable(storage))
                 .then(ZoneToggleCommand.buildDisable(storage))
-                .then(ZoneMobCommand.buildAddMob(storage))
-                .then(ZoneMobCommand.buildRemoveMob(storage))
+                .then(ZoneMobCommand.buildMobRoot(storage))
                 .then(ZoneClearCommand.build(storage))
+
                 .then(literal("delete")
-                        .then(com.mojang.brigadier.builder.RequiredArgumentBuilder
-                                .<ServerCommandSource, String>argument("id", com.mojang.brigadier.arguments.StringArgumentType.word())
+                        .then(argument("id", StringArgumentType.word())
                                 .executes(context -> {
-                                    String id = com.mojang.brigadier.arguments.StringArgumentType.getString(context, "id");
+                                    String id = StringArgumentType.getString(context, "id");
 
                                     if (!storage.deleteZone(id)) {
-                                        com.gerbarium.regions.command.CommandFeedback.error(context.getSource(), "Zone not found: " + id);
+                                        CommandFeedback.error(context.getSource(), "Zone not found: " + id);
                                         return 0;
                                     }
 
-                                    com.gerbarium.regions.command.CommandFeedback.send(context.getSource(), "Deleted zone: " + id);
+                                    CommandFeedback.send(context.getSource(), "Deleted zone: " + id);
                                     return 1;
                                 })
                         )

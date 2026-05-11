@@ -31,6 +31,10 @@ public class ZoneStorage {
         return data;
     }
 
+    public String toJson() {
+        return GSON.toJson(data);
+    }
+
     public void reload() {
         this.data = load();
     }
@@ -92,6 +96,18 @@ public class ZoneStorage {
 
                 if (loaded == null || loaded.zones == null) {
                     return new ZonesFile();
+                }
+
+                for (Zone zone : loaded.zones) {
+                    if (zone.mobs == null) {
+                        continue;
+                    }
+
+                    zone.mobs.forEach(rule -> {
+                        if (rule.id == null || rule.id.isBlank()) {
+                            rule.id = "legacy_" + rule.entity.replace(':', '_');
+                        }
+                    });
                 }
 
                 return loaded;

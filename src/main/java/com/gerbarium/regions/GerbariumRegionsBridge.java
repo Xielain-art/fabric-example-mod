@@ -1,6 +1,7 @@
 package com.gerbarium.regions;
 
 import com.gerbarium.regions.command.ZoneCommands;
+import com.gerbarium.regions.network.GerbariumServerNetworking;
 import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,8 +15,10 @@ public class GerbariumRegionsBridge implements ModInitializer {
         printStartupBanner();
 
         ZoneCommands.register();
+        GerbariumServerNetworking.register();
 
         LOGGER.info("[Gerbarium] Commands registered successfully.");
+        LOGGER.info("[Gerbarium] Networking registered successfully.");
         LOGGER.info("[Gerbarium] Regions Bridge is ready.");
     }
 
@@ -33,14 +36,8 @@ public class GerbariumRegionsBridge implements ModInitializer {
         LOGGER.info("================================================================================");
         LOGGER.info("  Mod ID:      {}", MOD_ID);
         LOGGER.info("  Version:     1.0.0");
-        LOGGER.info("  Environment: SERVER");
-        LOGGER.info("  Purpose:     WorldEdit selection -> Gerbarium regions.json -> KubeJS logic");
-        LOGGER.info("--------------------------------------------------------------------------------");
-        LOGGER.info("  Available workflow:");
-        LOGGER.info("    1. Select region with WorldEdit: //wand");
-        LOGGER.info("    2. Create zone:                  /gerb zone create <id>");
-        LOGGER.info("    3. Add mob rule:                 /gerb zone addmob <zone> <entity> ...");
-        LOGGER.info("    4. KubeJS reads:                 config/gerbarium/regions.json");
+        LOGGER.info("  Environment: CLIENT + SERVER");
+        LOGGER.info("  Purpose:     WorldEdit zones + owo admin GUI + future mob spawn rules");
         LOGGER.info("--------------------------------------------------------------------------------");
         LOGGER.info("  Status: LOADED");
         LOGGER.info("================================================================================");
