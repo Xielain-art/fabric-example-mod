@@ -1,12 +1,27 @@
 package com.gerbarium.regions.model;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+
 public class MobRule {
     public String id;
+    public String uid64;
+    public String name;
     public String entity;
-    public int maxAlive;
-    public int spawnCount;
-    public int respawnSeconds;
-    public double chance;
+    public Boolean enabled = true;
+    public SpawnType spawnType = SpawnType.PACK;
+    public RefillMode refillMode = RefillMode.ON_ACTIVATION;
+    public int maxAlive = 10;
+    public int spawnCount = 4;
+    public int respawnSeconds = 900;
+    public double chance = 1.0;
+    public CooldownStart cooldownStart = CooldownStart.AFTER_ACTIVATION;
+    public boolean spawnWhenReady = true;
+    public int failedSpawnRetrySeconds = 60;
+    public boolean despawnWhenZoneInactive = false;
+    public boolean announceOnSpawn = false;
+    public List<CompanionRule> companions = new ArrayList<>();
 
     public MobRule() {
     }
@@ -18,5 +33,51 @@ public class MobRule {
         this.spawnCount = spawnCount;
         this.respawnSeconds = respawnSeconds;
         this.chance = chance;
+    }
+
+    public static MobRule packDefaults(String id, String entity) {
+        MobRule rule = new MobRule();
+        rule.name = id;
+        rule.uid64 = generateUid64();
+        rule.id = rule.uid64;
+        rule.entity = entity;
+        rule.enabled = true;
+        rule.spawnType = SpawnType.PACK;
+        rule.refillMode = RefillMode.ON_ACTIVATION;
+        rule.maxAlive = 10;
+        rule.spawnCount = 4;
+        rule.respawnSeconds = 900;
+        rule.chance = 1.0;
+        rule.cooldownStart = CooldownStart.AFTER_ACTIVATION;
+        rule.spawnWhenReady = true;
+        rule.failedSpawnRetrySeconds = 60;
+        rule.despawnWhenZoneInactive = false;
+        rule.announceOnSpawn = false;
+        return rule;
+    }
+
+    public static MobRule uniqueDefaults(String id, String entity) {
+        MobRule rule = new MobRule();
+        rule.name = id;
+        rule.uid64 = generateUid64();
+        rule.id = rule.uid64;
+        rule.entity = entity;
+        rule.enabled = true;
+        rule.spawnType = SpawnType.UNIQUE;
+        rule.refillMode = RefillMode.AFTER_DEATH;
+        rule.maxAlive = 1;
+        rule.spawnCount = 1;
+        rule.respawnSeconds = 86400;
+        rule.chance = 1.0;
+        rule.cooldownStart = CooldownStart.AFTER_DEATH;
+        rule.spawnWhenReady = true;
+        rule.failedSpawnRetrySeconds = 60;
+        rule.despawnWhenZoneInactive = false;
+        rule.announceOnSpawn = true;
+        return rule;
+    }
+
+    public static String generateUid64() {
+        return String.format("%016x", ThreadLocalRandom.current().nextLong());
     }
 }

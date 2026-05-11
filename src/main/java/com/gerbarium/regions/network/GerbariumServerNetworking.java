@@ -3,6 +3,8 @@ package com.gerbarium.regions.network;
 import com.gerbarium.regions.command.CommandFeedback;
 import com.gerbarium.regions.model.MobRule;
 import com.gerbarium.regions.model.Zone;
+import com.gerbarium.regions.model.ZoneDefaults;
+import com.google.gson.Gson;
 import com.gerbarium.regions.permission.PermissionUtil;
 import com.gerbarium.regions.storage.ZoneStorage;
 import com.gerbarium.regions.worldedit.WorldEditSelectionReader;
@@ -24,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 
 public final class GerbariumServerNetworking {
+    private static final Gson GSON = new Gson();
     private static final ZoneStorage STORAGE = ZoneStorage.getInstance();
     private static final int MAX_STRING_LENGTH = 262144;
 
@@ -35,6 +38,7 @@ public final class GerbariumServerNetworking {
         registerRequestEntities();
         registerAddMobRule();
         registerRemoveMobRule();
+        registerUpdateZoneSettings();
         registerToggleZone();
         registerSelectZone();
         registerDeselectZone();
@@ -87,22 +91,23 @@ public final class GerbariumServerNetworking {
     private static void registerAddMobRule() {
         ServerPlayNetworking.registerGlobalReceiver(GerbariumPackets.ADD_MOB_RULE, (server, player, handler, buf, responseSender) -> {
             String zoneId = buf.readString(256);
-            String ruleId = buf.readString(256);
-            String entityIdRaw = buf.readString(256);
-            int maxAlive = buf.readVarInt();
-            int spawnCount = buf.readVarInt();
-            int respawnSeconds = buf.readVarInt();
-            double chance = buf.readDouble();
+            String mobRuleJson = buf.readString(MAX_STRING_LENGTH);
 
             server.execute(() -> {
                 if (!hasAccess(player)) {
                     return;
                 }
 
-                Identifier entityId = Identifier.tryParse(entityIdRaw);
+                MobRule incoming = GSON.fromJson(mobRuleJson, MobRule.class);
+                if (incoming == null) {
+                    CommandFeedback.error(player.getCommandSource(), "Invalid mob rule payload.");
+                    return;
+                }
+
+                Identifier entityId = Identifier.tryParse(incoming.entity);
 
                 if (entityId == null) {
-                    CommandFeedback.error(player.getCommandSource(), "Invalid entity id: " + entityIdRaw);
+                    CommandFeedback.error(player.getCommandSource(), "Invalid entity id: " + incoming.entity);
                     return;
                 }
 
@@ -113,13 +118,11 @@ public final class GerbariumServerNetworking {
                     return;
                 }
 
-                if (ruleId.isBlank()) {
-                    CommandFeedback.error(player.getCommandSource(), "Rule ID cannot be empty.");
-                    return;
-                }
-
-                if (maxAlive < 1 || spawnCount < 1 || respawnSeconds < 1 || chance < 0.0 || chance > 1.0) {
-                    CommandFeedback.error(player.getCommandSource(), "Invalid mob rule values.");
+                try {
+                    ZoneDefaults.validateMobRule(incoming);
+                    ZoneDefaults.normalizeMobRule(incoming);
+                } catch (IllegalArgumentException e) {
+                    CommandFeedback.error(player.getCommandSource(), e.getMessage());
                     return;
                 }
 
@@ -141,13 +144,62 @@ public final class GerbariumServerNetworking {
                     return;
                 }
 
-                zone.mobs.removeIf(rule -> ruleId.equalsIgnoreCase(rule.id));
-                zone.mobs.add(new MobRule(ruleId, entityId.toString(), maxAlive, spawnCount, respawnSeconds, chance));
+                incoming.entity = entityId.toString();
+                zone.mobs.removeIf(rule -> incoming.id.equalsIgnoreCase(rule.id));
+                zone.mobs.add(incoming);
 
-                STORAGE.save();
+                STORAGE.addZone(zone);
                 STORAGE.reload();
 
-                CommandFeedback.send(player.getCommandSource(), "Saved mob rule '" + ruleId + "' in zone '" + zoneId + "'.");
+                CommandFeedback.send(player.getCommandSource(), "Saved mob rule '" + incoming.id + "' in zone '" + zoneId + "'.");
+                sendZones(player);
+            });
+        });
+    }
+
+    private static void registerUpdateZoneSettings() {
+        ServerPlayNetworking.registerGlobalReceiver(GerbariumPackets.UPDATE_ZONE_SETTINGS, (server, player, handler, buf, responseSender) -> {
+            String zoneId = buf.readString(256);
+            int activationRange = buf.readVarInt();
+            int deactivateAfter = buf.readVarInt();
+            int firstSpawnDelay = buf.readVarInt();
+            int reactivationCooldown = buf.readVarInt();
+            int minDistance = buf.readVarInt();
+            int maxDistance = buf.readVarInt();
+            int maxPositionAttempts = buf.readVarInt();
+            boolean requireLoadedChunk = buf.readBoolean();
+            boolean respectVanilla = buf.readBoolean();
+
+            server.execute(() -> {
+                if (!hasAccess(player)) {
+                    return;
+                }
+                STORAGE.reload();
+                Optional<Zone> optionalZone = STORAGE.findZone(zoneId);
+                if (optionalZone.isEmpty()) {
+                    CommandFeedback.error(player.getCommandSource(), "Zone not found: " + zoneId);
+                    sendZones(player);
+                    return;
+                }
+                Zone zone = optionalZone.get();
+                ZoneDefaults.normalizeZone(zone);
+                zone.activation.range = activationRange;
+                zone.activation.deactivateAfterSeconds = deactivateAfter;
+                zone.activation.firstSpawnDelaySeconds = firstSpawnDelay;
+                zone.activation.reactivationCooldownSeconds = reactivationCooldown;
+                zone.spawn.minDistanceFromPlayer = minDistance;
+                zone.spawn.maxDistanceFromPlayer = maxDistance;
+                zone.spawn.maxPositionAttempts = maxPositionAttempts;
+                zone.spawn.requireLoadedChunk = requireLoadedChunk;
+                zone.spawn.respectVanillaSpawnRules = respectVanilla;
+                try {
+                    ZoneDefaults.validateZone(zone);
+                } catch (IllegalArgumentException e) {
+                    CommandFeedback.error(player.getCommandSource(), e.getMessage());
+                    return;
+                }
+                STORAGE.addZone(zone);
+                STORAGE.reload();
                 sendZones(player);
             });
         });

@@ -3,6 +3,7 @@ package com.gerbarium.regions.command.zone;
 import com.gerbarium.regions.command.CommandFeedback;
 import com.gerbarium.regions.model.MobRule;
 import com.gerbarium.regions.model.Zone;
+import com.gerbarium.regions.model.ZoneDefaults;
 import com.gerbarium.regions.storage.ZoneStorage;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -30,6 +31,7 @@ public final class ZoneInfoCommand {
                             }
 
                             Zone zone = optionalZone.get();
+                            ZoneDefaults.normalizeZone(zone);
 
                             CommandFeedback.send(context.getSource(), "Zone: " + zone.id);
                             CommandFeedback.send(context.getSource(), "Enabled: " + zone.enabled);
@@ -37,16 +39,14 @@ public final class ZoneInfoCommand {
                             CommandFeedback.send(context.getSource(), "Min: " + zone.min.x + " " + zone.min.y + " " + zone.min.z);
                             CommandFeedback.send(context.getSource(), "Max: " + zone.max.x + " " + zone.max.y + " " + zone.max.z);
                             CommandFeedback.send(context.getSource(), "Mobs: " + zone.mobs.size());
+                            CommandFeedback.send(context.getSource(), "Activation range=" + zone.activation.range + ", deactivateAfter=" + zone.activation.deactivateAfterSeconds + "s");
+                            CommandFeedback.send(context.getSource(), "Spawn distance=" + zone.spawn.minDistanceFromPlayer + "-" + zone.spawn.maxDistanceFromPlayer + ", attempts=" + zone.spawn.maxPositionAttempts);
 
                             if (zone.mobs.isEmpty()) {
                                 CommandFeedback.send(context.getSource(), "No mob rules configured.");
                             } else {
                                 for (MobRule mob : zone.mobs) {
-                                    CommandFeedback.send(context.getSource(), "- " + mob.entity
-                                            + " max=" + mob.maxAlive
-                                            + " count=" + mob.spawnCount
-                                            + " delay=" + mob.respawnSeconds
-                                            + " chance=" + mob.chance);
+                                    CommandFeedback.send(context.getSource(), "- [" + mob.spawnType + "] " + mob.entity + " max=" + mob.maxAlive + " count=" + mob.spawnCount + " cooldown=" + mob.respawnSeconds + "s chance=" + mob.chance);
                                 }
                             }
 

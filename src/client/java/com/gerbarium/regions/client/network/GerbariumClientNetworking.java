@@ -2,7 +2,9 @@ package com.gerbarium.regions.client.network;
 
 import com.gerbarium.regions.client.data.ClientGerbariumData;
 import com.gerbarium.regions.client.screen.RegionsScreen;
+import com.gerbarium.regions.model.MobRule;
 import com.gerbarium.regions.network.GerbariumPackets;
+import com.google.gson.Gson;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.client.MinecraftClient;
@@ -12,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class GerbariumClientNetworking {
+    private static final Gson GSON = new Gson();
     private static final int MAX_STRING_LENGTH = 262144;
     private static String preferredZoneId = "";
 
@@ -57,18 +60,39 @@ public final class GerbariumClientNetworking {
         ClientPlayNetworking.send(GerbariumPackets.REQUEST_ENTITIES, PacketByteBufs.empty());
     }
 
-    public static void addMobRule(String zoneId, String ruleId, String entityId, int maxAlive, int spawnCount, int respawnSeconds, double chance) {
+    public static void addMobRule(String zoneId, MobRule rule) {
         PacketByteBuf buf = PacketByteBufs.create();
 
         buf.writeString(zoneId, 256);
-        buf.writeString(ruleId, 256);
-        buf.writeString(entityId, 256);
-        buf.writeVarInt(maxAlive);
-        buf.writeVarInt(spawnCount);
-        buf.writeVarInt(respawnSeconds);
-        buf.writeDouble(chance);
+        buf.writeString(GSON.toJson(rule), MAX_STRING_LENGTH);
 
         ClientPlayNetworking.send(GerbariumPackets.ADD_MOB_RULE, buf);
+    }
+
+    public static void sendUpdateZoneSettings(
+            String zoneId,
+            int activationRange,
+            int deactivateAfterSeconds,
+            int firstSpawnDelaySeconds,
+            int reactivationCooldownSeconds,
+            int minDistanceFromPlayer,
+            int maxDistanceFromPlayer,
+            int maxPositionAttempts,
+            boolean requireLoadedChunk,
+            boolean respectVanillaSpawnRules
+    ) {
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeString(zoneId, 256);
+        buf.writeVarInt(activationRange);
+        buf.writeVarInt(deactivateAfterSeconds);
+        buf.writeVarInt(firstSpawnDelaySeconds);
+        buf.writeVarInt(reactivationCooldownSeconds);
+        buf.writeVarInt(minDistanceFromPlayer);
+        buf.writeVarInt(maxDistanceFromPlayer);
+        buf.writeVarInt(maxPositionAttempts);
+        buf.writeBoolean(requireLoadedChunk);
+        buf.writeBoolean(respectVanillaSpawnRules);
+        ClientPlayNetworking.send(GerbariumPackets.UPDATE_ZONE_SETTINGS, buf);
     }
 
     public static void removeMobRule(String zoneId, String ruleId) {
@@ -121,3 +145,4 @@ public final class GerbariumClientNetworking {
         preferredZoneId = zoneId == null ? "" : zoneId;
     }
 }
+

@@ -33,34 +33,40 @@ public final class HelpCommand {
         CommandFeedback.send(source, "/gerb test");
         CommandFeedback.send(source, "/gerb gui - open admin GUI");
         CommandFeedback.send(source, "/gerb zone - show zone commands");
-        CommandFeedback.send(source, "/gerb zone gui <id> - open GUI for selected zone");
-        CommandFeedback.send(source, "/gerb zone create <id>");
-        CommandFeedback.send(source, "/gerb zone delete <id>");
+        CommandFeedback.send(source, "/gerb zone gui <zone> - open GUI for selected zone");
+        CommandFeedback.send(source, "/gerb zone create <zone>");
+        CommandFeedback.send(source, "/gerb zone delete <zone>");
         CommandFeedback.send(source, "/gerb zone list");
-        CommandFeedback.send(source, "/gerb zone info <id>");
-        CommandFeedback.send(source, "/gerb zone select <id>");
-        CommandFeedback.send(source, "/gerb zone enable <id>");
-        CommandFeedback.send(source, "/gerb zone disable <id>");
+        CommandFeedback.send(source, "/gerb zone info <zone>");
+        CommandFeedback.send(source, "/gerb zone select <zone>");
+        CommandFeedback.send(source, "/gerb zone enable <zone>");
+        CommandFeedback.send(source, "/gerb zone disable <zone>");
         CommandFeedback.send(source, "/gerb zone mob - show mob rule commands");
-        CommandFeedback.send(source, "/gerb zone clear <id>");
+        CommandFeedback.send(source, "/gerb zone clear <zone>");
         CommandFeedback.send(source, "/gerb zone reload");
     }
 
     public static void sendZoneHelp(ServerCommandSource source) {
         CommandFeedback.send(source, "Gerbarium zone commands:");
-        CommandFeedback.send(source, "/gerb zone gui <id> - open GUI for zone");
-        CommandFeedback.send(source, "/gerb zone create <id> - save current WorldEdit selection as zone");
-        CommandFeedback.send(source, "/gerb zone select <id> - load saved zone back into WorldEdit selection");
+        CommandFeedback.send(source, "/gerb zone gui <zone> - open GUI for zone");
+        CommandFeedback.send(source, "/gerb zone create <zone> - save current WorldEdit selection as zone");
+        CommandFeedback.send(source, "/gerb zone select <zone> - load saved zone back into WorldEdit selection");
         CommandFeedback.send(source, "/gerb zone list - list zones");
-        CommandFeedback.send(source, "/gerb zone info <id> - inspect zone");
-        CommandFeedback.send(source, "/gerb zone delete <id> - delete zone");
-        CommandFeedback.send(source, "/gerb zone enable <id> - enable zone");
-        CommandFeedback.send(source, "/gerb zone disable <id> - disable zone");
-        CommandFeedback.send(source, "/gerb zone mob add <zone> <ruleId> <entity> <maxAlive> <spawnCount> <respawnSeconds> <chance>");
-        CommandFeedback.send(source, "/gerb zone mob remove <zone> <ruleId>");
+        CommandFeedback.send(source, "/gerb zone info <zone> - inspect zone");
+        CommandFeedback.send(source, "/gerb zone delete <zone> - delete zone");
+        CommandFeedback.send(source, "/gerb zone enable <zone> - enable zone");
+        CommandFeedback.send(source, "/gerb zone disable <zone> - disable zone");
+        CommandFeedback.send(source, "/gerb zone mob add-pack <zone> <ruleName> <entity> <maxAlive> <spawnCount> <respawnSeconds> <chance>");
+        CommandFeedback.send(source, "/gerb zone mob add-unique <zone> <ruleName> <entity> <respawnSeconds> <chance>");
+        CommandFeedback.send(source, "/gerb zone mob remove <zone> <ruleName>");
         CommandFeedback.send(source, "/gerb zone mob list <zone>");
-        CommandFeedback.send(source, "/gerb zone mob info <zone> <ruleId>");
-        CommandFeedback.send(source, "/gerb zone clear <id> - remove mobs tagged as gerb_zone_<id>");
+        CommandFeedback.send(source, "/gerb zone mob info <zone> <ruleName>");
+        CommandFeedback.send(source, "/gerb zone mob companion add <zone> <ruleName> <companionName> <entity> <count> <radius> <chance>");
+        CommandFeedback.send(source, "/gerb zone mob companion remove <zone> <ruleName> <companionName>");
+        CommandFeedback.send(source, "/gerb zone mob companion list <zone> <ruleName>");
+        CommandFeedback.send(source, "/gerb zone mob companion info <zone> <ruleName> <companionName>");
+        CommandFeedback.send(source, "/gerb zone clear <zone> - remove mobs tagged as gerb_zone_<zone>");
         CommandFeedback.send(source, "/gerb zone reload - reload regions.json");
+        CommandFeedback.send(source, "UI uses rule names; uid64 is available in advanced/view mode.");
     }
 }

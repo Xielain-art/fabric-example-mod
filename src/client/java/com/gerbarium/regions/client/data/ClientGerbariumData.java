@@ -1,6 +1,7 @@
 package com.gerbarium.regions.client.data;
 
 import com.gerbarium.regions.model.Zone;
+import com.gerbarium.regions.model.ZoneDefaults;
 import com.gerbarium.regions.model.ZonesFile;
 import com.google.gson.Gson;
 
@@ -26,6 +27,9 @@ public final class ClientGerbariumData {
         }
 
         zonesFile = parsed;
+        for (Zone zone : zonesFile.zones) {
+            ZoneDefaults.normalizeZone(zone);
+        }
     }
 
     public static ZonesFile zonesFile() {

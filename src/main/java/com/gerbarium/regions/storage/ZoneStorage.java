@@ -2,6 +2,7 @@ package com.gerbarium.regions.storage;
 
 import com.gerbarium.regions.GerbariumRegionsBridge;
 import com.gerbarium.regions.model.Zone;
+import com.gerbarium.regions.model.ZoneDefaults;
 import com.gerbarium.regions.model.ZonesFile;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -91,7 +92,8 @@ public class ZoneStorage {
             throw new IllegalArgumentException("Zone id cannot be empty");
         }
 
-        normalizeZone(zone);
+        ZoneDefaults.normalizeZone(zone);
+        ZoneDefaults.validateZone(zone);
 
         data.zones.removeIf(existing -> existing.id != null && existing.id.equalsIgnoreCase(zone.id));
         data.zones.add(zone);
@@ -166,7 +168,7 @@ public class ZoneStorage {
                     );
 
                     for (Zone zone : legacy.zones) {
-                        normalizeZone(zone);
+                        ZoneDefaults.normalizeZone(zone);
                         saveZone(zone);
                     }
 
@@ -213,7 +215,7 @@ public class ZoneStorage {
                                 : fileName;
                     }
 
-                    normalizeZone(zone);
+                    ZoneDefaults.normalizeZone(zone);
                     result.zones.add(zone);
                 } catch (Exception e) {
                     GerbariumRegionsBridge.LOGGER.error("[Gerbarium] Failed to load zone file: {}", path.toAbsolutePath(), e);
@@ -237,7 +239,7 @@ public class ZoneStorage {
             }
 
             for (Zone zone : loaded.zones) {
-                normalizeZone(zone);
+                ZoneDefaults.normalizeZone(zone);
             }
 
             return loaded;
@@ -248,9 +250,21 @@ public class ZoneStorage {
     }
 
     private void saveZone(Zone zone) throws IOException {
-        normalizeZone(zone);
+        ZoneDefaults.normalizeZone(zone);
+        ZoneDefaults.validateZone(zone);
 
         Path path = zonePath(zone.id);
+        Path expected = zonePath(zone.id);
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(zonesDir, "*.json")) {
+            for (Path existing : stream) {
+                String fileName = existing.getFileName().toString();
+                String base = fileName.endsWith(".json") ? fileName.substring(0, fileName.length() - 5) : fileName;
+                if (base.equalsIgnoreCase(zone.id) && !existing.equals(expected)) {
+                    Files.deleteIfExists(existing);
+                }
+            }
+        }
 
         try (Writer writer = Files.newBufferedWriter(path)) {
             GSON.toJson(zone, writer);
@@ -264,20 +278,7 @@ public class ZoneStorage {
     private String safeFileName(String zoneId) {
         return zoneId
                 .trim()
-                .toLowerCase()
-                .replaceAll("[^a-z0-9_\\-]", "_");
-    }
-
-    private void normalizeZone(Zone zone) {
-        if (zone.mobs == null) {
-            zone.mobs = new ArrayList<>();
-        }
-
-        zone.mobs.forEach(rule -> {
-            if (rule.id == null || rule.id.isBlank()) {
-                rule.id = "legacy_" + rule.entity.replace(':', '_');
-            }
-        });
+                .replaceAll("[^a-zA-Z0-9_\\-]", "_");
     }
 
     private ZonesFile emptyZonesFile() {

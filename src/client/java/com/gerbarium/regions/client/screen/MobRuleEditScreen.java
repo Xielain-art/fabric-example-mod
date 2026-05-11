@@ -1,254 +1,307 @@
 package com.gerbarium.regions.client.screen;
 
 import com.gerbarium.regions.client.network.GerbariumClientNetworking;
+import com.gerbarium.regions.model.CompanionRule;
 import com.gerbarium.regions.model.MobRule;
+import com.gerbarium.regions.model.RefillMode;
+import com.gerbarium.regions.model.SpawnType;
+import com.gerbarium.regions.model.ZoneDefaults;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 
-public class MobRuleEditScreen extends Screen {
-    private final String zoneId;
-    private final MobRule existingRule;
+import java.util.ArrayList;
+import java.util.List;
 
-    private String draftRuleId;
-    private String draftEntity;
-    private String draftMaxAlive;
-    private String draftSpawnCount;
-    private String draftRespawnSeconds;
-    private String draftChance;
+public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer {
+    private final String zoneId;
+    private MobRule draft;
+    private String error = "";
+    private int page = 0;
 
     private TextFieldWidget ruleIdField;
     private TextFieldWidget entityField;
     private TextFieldWidget maxAliveField;
     private TextFieldWidget spawnCountField;
-    private TextFieldWidget respawnSecondsField;
+    private TextFieldWidget respawnField;
     private TextFieldWidget chanceField;
+    private TextFieldWidget retryField;
 
-    private String error = "";
+    private CyclingButtonWidget<Boolean> enabledButton;
+    private CyclingButtonWidget<SpawnType> spawnTypeButton;
+    private CyclingButtonWidget<RefillMode> refillModeButton;
+    private CyclingButtonWidget<Boolean> despawnButton;
+    private CyclingButtonWidget<Boolean> announceButton;
 
     public MobRuleEditScreen(String zoneId, MobRule existingRule) {
         super(Text.literal(existingRule == null ? "Add Mob Rule" : "Edit Mob Rule"));
-
         this.zoneId = zoneId;
-        this.existingRule = existingRule;
-
-        this.draftRuleId = existingRule == null ? "" : safeRuleId(existingRule);
-        this.draftEntity = existingRule == null ? "minecraft:zombie" : existingRule.entity;
-        this.draftMaxAlive = existingRule == null ? "5" : String.valueOf(existingRule.maxAlive);
-        this.draftSpawnCount = existingRule == null ? "1" : String.valueOf(existingRule.spawnCount);
-        this.draftRespawnSeconds = existingRule == null ? "60" : String.valueOf(existingRule.respawnSeconds);
-        this.draftChance = existingRule == null ? "1.0" : String.valueOf(existingRule.chance);
+        this.draft = existingRule == null ? MobRule.packDefaults("", "minecraft:zombie") : cloneRule(existingRule);
+        ZoneDefaults.normalizeMobRule(this.draft);
     }
 
     @Override
     protected void init() {
         clearChildren();
+        page = Math.max(0, Math.min(page, 2));
 
-        // Адаптивная ширина панели (от 300 до 500)
-        int panelWidth = Math.max(300, Math.min(width - 40, 500));
-        int panelX = (width - panelWidth) / 2;
+        int x = width / 2 - 220;
+        int w = 440;
+        int top = 34;
 
-        int contentX = panelX + 20;
-        int contentWidth = panelWidth - 40;
+        ruleIdField = field(x, top, w, draft.name == null ? "" : draft.name);
+        entityField = field(x, top + 34, w - 104, draft.entity);
 
-        // Динамическое вычисление стартовой высоты для центрирования формы
-        int formHeight = 220;
-        int topY = Math.max(35, (height - formHeight) / 2);
+        enabledButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(Boolean.TRUE.equals(draft.enabled))
+                .build(x, top + 68, 100, 20, Text.literal("Enabled"), (b, v) -> {}));
 
-        int pickButtonWidth = 90;
-        int gap = 8;
+        spawnTypeButton = addDrawableChild(CyclingButtonWidget.<SpawnType>builder(v -> Text.literal(v.name()))
+                .values(List.of(SpawnType.PACK, SpawnType.UNIQUE))
+                .initially(draft.spawnType)
+                .build(x + 104, top + 68, 140, 20, Text.literal("Spawn Type"), (b, v) -> {
+                    capture();
+                    draft.spawnType = v;
+                    init();
+                }));
 
-        int fullFieldWidth = contentWidth;
-        int entityFieldWidth = contentWidth - pickButtonWidth - gap;
+        addDrawableChild(ButtonWidget.builder(Text.literal("Pick Entity"), b -> {
+            capture();
+            client.setScreen(new EntityPickerScreen(this, this, draft.entity));
+        }).dimensions(x + w - 100, top + 34, 100, 20).build());
 
-        int halfGap = 12;
-        int halfFieldWidth = (contentWidth - halfGap) / 2;
+        if (page == 1) {
+            buildSecondPage(x, top);
+        } else if (page == 2) {
+            buildThirdPage(x, top);
+        }
 
-        // Ряды с полями (шаг 44 пикселя)
-        int row1 = topY + 12;
-        int row2 = topY + 56;
-        int row3 = topY + 100;
-        int row4 = topY + 144;
-        int row5 = topY + 196; // Кнопки Save / Cancel
+        addDrawableChild(ButtonWidget.builder(Text.literal("<"), b -> { capture(); page = Math.max(0, page - 1); init(); })
+                .dimensions(x + 170, 10, 24, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Page " + (page + 1) + "/3"), b -> {})
+                .dimensions(x + 198, 10, 80, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal(">"), b -> { capture(); page = Math.min(2, page + 1); init(); })
+                .dimensions(x + 282, 10, 24, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Advanced"), b -> {
+                capture();
+                page = 2;
+                init();
+        }).dimensions(x + 310, 10, 132, 20).build());
 
-        ruleIdField = field(contentX, row1, fullFieldWidth, draftRuleId);
-        entityField = field(contentX, row2, entityFieldWidth, draftEntity);
-
-        maxAliveField = field(contentX, row3, halfFieldWidth, draftMaxAlive);
-        spawnCountField = field(contentX + halfFieldWidth + halfGap, row3, halfFieldWidth, draftSpawnCount);
-
-        respawnSecondsField = field(contentX, row4, halfFieldWidth, draftRespawnSeconds);
-        chanceField = field(contentX + halfFieldWidth + halfGap, row4, halfFieldWidth, draftChance);
+        addDrawableChild(ButtonWidget.builder(Text.literal("Save"), b -> save())
+                .dimensions(x, height - 32, 216, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> client.setScreen(new ZoneDetailsScreen(zoneId)))
+                .dimensions(x + 224, height - 32, 216, 20).build());
 
         addDrawableChild(ruleIdField);
         addDrawableChild(entityField);
+    }
+
+    private void buildSecondPage(int x, int top) {
+        refillModeButton = addDrawableChild(CyclingButtonWidget.<RefillMode>builder(v -> Text.literal(v.name()))
+                .values(List.of(RefillMode.ON_ACTIVATION, RefillMode.TIMED, RefillMode.AFTER_DEATH))
+                .initially(draft.refillMode)
+                .build(x, top + 112, 440, 20, Text.literal("Refill Mode"), (b, v) -> {}));
+
+        maxAliveField = field(x, top + 146, 106, String.valueOf(draft.maxAlive));
+        spawnCountField = field(x + 110, top + 146, 106, String.valueOf(draft.spawnCount));
+        respawnField = field(x + 220, top + 146, 106, String.valueOf(draft.respawnSeconds));
+        chanceField = field(x + 330, top + 146, 110, String.valueOf(draft.chance));
         addDrawableChild(maxAliveField);
         addDrawableChild(spawnCountField);
-        addDrawableChild(respawnSecondsField);
+        addDrawableChild(respawnField);
         addDrawableChild(chanceField);
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Pick Entity"), button -> {
-                    captureDraft();
-                    client.setScreen(new EntityPickerScreen(this, draftEntity));
-                })
-                .dimensions(contentX + entityFieldWidth + gap, row2, pickButtonWidth, 20)
-                .build());
+        retryField = field(x, top + 180, 216, String.valueOf(draft.failedSpawnRetrySeconds));
+        addDrawableChild(retryField);
 
-        int saveCancelWidth = Math.min(120, halfFieldWidth);
-        int buttonsX = width / 2 - saveCancelWidth - gap / 2;
+        despawnButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.despawnWhenZoneInactive)
+                .build(x + 220, top + 180, 220, 20, Text.literal("Despawn When Zone Inactive"), (b, v) -> {}));
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Save"), button -> save())
-                .dimensions(buttonsX, row5, saveCancelWidth, 20)
-                .build());
+        announceButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.announceOnSpawn)
+                .build(x, top + 214, 440, 20, Text.literal("Announce On Spawn"), (b, v) -> {}));
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Cancel"), button -> client.setScreen(new RegionsScreen(zoneId)))
-                .dimensions(buttonsX + saveCancelWidth + gap, row5, saveCancelWidth, 20)
-                .build());
+        if (draft.spawnType == SpawnType.PACK) {
+            addDrawableChild(ButtonWidget.builder(Text.literal("PACK note: TIMED/low respawn can be farmable"), b -> {})
+                    .dimensions(x, top + 248, 360, 20).build());
+        } else {
+            addDrawableChild(ButtonWidget.builder(Text.literal("UNIQUE note: values are editable; defaults are just presets"), b -> {})
+                    .dimensions(x, top + 248, 440, 20).build());
+        }
     }
 
-    private TextFieldWidget field(int x, int y, int width, String value) {
-        TextFieldWidget field = new TextFieldWidget(textRenderer, x, y, width, 20, Text.literal(""));
-        field.setText(value);
-        return field;
+    private void buildThirdPage(int x, int top) {
+        int companionCount = draft.companions == null ? 0 : draft.companions.size();
+
+        addDrawableChild(ButtonWidget.builder(Text.literal("Edit Companions"), b -> {
+            capture();
+            String label = draft.name == null || draft.name.isBlank() ? "(new rule)" : draft.name;
+            client.setScreen(new CompanionListScreen(this, draft.companions, label));
+        }).dimensions(x, top + 112, 180, 20).build());
+
+        addDrawableChild(ButtonWidget.builder(Text.literal("Companions: " + companionCount), b -> {})
+                .dimensions(x + 188, top + 112, 120, 20).build());
+
+        addDrawableChild(ButtonWidget.builder(Text.literal("UID64"), b -> {})
+                .dimensions(x, top + 146, 80, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal(draft.uid64 == null ? "" : draft.uid64), b -> {})
+                .dimensions(x + 84, top + 146, 356, 20).build());
+
+        addDrawableChild(ButtonWidget.builder(Text.literal("Back to Basics"), b -> {
+            capture();
+            page = 0;
+            init();
+        }).dimensions(x, top + 180, 140, 20).build());
     }
 
-    private void captureDraft() {
-        draftRuleId = ruleIdField.getText();
-        draftEntity = entityField.getText();
-        draftMaxAlive = maxAliveField.getText();
-        draftSpawnCount = spawnCountField.getText();
-        draftRespawnSeconds = respawnSecondsField.getText();
-        draftChance = chanceField.getText();
+    private TextFieldWidget field(int x, int y, int w, String value) {
+        TextFieldWidget f = new TextFieldWidget(textRenderer, x, y, w, 20, Text.literal(""));
+        f.setText(value == null ? "" : value);
+        return f;
     }
 
-    public void setEntityId(String entityId) {
-        this.draftEntity = entityId;
+    private void capture() {
+        if (ruleIdField != null) {
+            draft.name = ruleIdField.getText().trim();
+        }
+        if (entityField != null) {
+            draft.entity = entityField.getText().trim();
+        }
+        if (enabledButton != null) {
+            draft.enabled = enabledButton.getValue();
+        }
+        if (spawnTypeButton != null) {
+            draft.spawnType = spawnTypeButton.getValue();
+        }
+        if (refillModeButton != null) {
+            draft.refillMode = refillModeButton.getValue();
+        }
+        if (maxAliveField != null) {
+            draft.maxAlive = parseInt(maxAliveField, draft.maxAlive);
+        }
+        if (spawnCountField != null) {
+            draft.spawnCount = parseInt(spawnCountField, draft.spawnCount);
+        }
+        if (respawnField != null) {
+            draft.respawnSeconds = parseInt(respawnField, draft.respawnSeconds);
+        }
+        if (chanceField != null) {
+            draft.chance = parseDouble(chanceField, draft.chance);
+        }
+        if (retryField != null) {
+            draft.failedSpawnRetrySeconds = parseInt(retryField, draft.failedSpawnRetrySeconds);
+        }
+        if (despawnButton != null) {
+            draft.despawnWhenZoneInactive = despawnButton.getValue();
+        }
+        if (announceButton != null) {
+            draft.announceOnSpawn = announceButton.getValue();
+        }
+    }
+
+    private int parseInt(TextFieldWidget f, int d) {
+        try { return Integer.parseInt(f.getText().trim()); } catch (Exception e) { return d; }
+    }
+
+    private double parseDouble(TextFieldWidget f, double d) {
+        try { return Double.parseDouble(f.getText().trim()); } catch (Exception e) { return d; }
+    }
+
+    @Override
+    public void onEntitySelected(String entityId) {
+        this.draft.entity = entityId;
+        if (this.entityField != null) {
+            this.entityField.setText(entityId);
+        }
+    }
+
+    public void setCompanions(List<CompanionRule> companions) {
+        draft.companions = companions == null ? new ArrayList<>() : new ArrayList<>(companions);
     }
 
     private void save() {
-        captureDraft();
-
+        capture();
         try {
-            String ruleId = draftRuleId.trim();
-            String entity = draftEntity.trim();
-            int maxAlive = Integer.parseInt(draftMaxAlive.trim());
-            int spawnCount = Integer.parseInt(draftSpawnCount.trim());
-            int respawnSeconds = Integer.parseInt(draftRespawnSeconds.trim());
-            double chance = Double.parseDouble(draftChance.trim());
-
-            if (ruleId.isBlank()) {
-                error = "Rule ID cannot be empty.";
-                return;
-            }
-
-            if (entity.isBlank() || !entity.contains(":")) {
-                error = "Entity ID must look like minecraft:zombie.";
-                return;
-            }
-
-            if (maxAlive < 1) {
-                error = "Max Alive must be 1 or higher.";
-                return;
-            }
-
-            if (spawnCount < 1) {
-                error = "Spawn Count must be 1 or higher.";
-                return;
-            }
-
-            if (respawnSeconds < 1) {
-                error = "Respawn Seconds must be 1 or higher.";
-                return;
-            }
-
-            if (chance < 0.0 || chance > 1.0) {
-                error = "Chance must be between 0.0 and 1.0.";
-                return;
-            }
-
-            GerbariumClientNetworking.addMobRule(zoneId, ruleId, entity, maxAlive, spawnCount, respawnSeconds, chance);
-        } catch (NumberFormatException e) {
-            error = "Numbers are invalid.";
+            ZoneDefaults.validateMobRule(draft);
+            ZoneDefaults.normalizeMobRule(draft);
+        } catch (IllegalArgumentException e) {
+            error = e.getMessage();
+            return;
         }
+        GerbariumClientNetworking.addMobRule(zoneId, draft);
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
+        int x = width / 2 - 220;
+        int top = 34;
+        int panelH = page == 0 ? 140 : (page == 1 ? 310 : 210);
 
-        int panelWidth = Math.max(300, Math.min(width - 40, 500));
-        int panelX = (width - panelWidth) / 2;
-        int contentX = panelX + 20;
-        int contentWidth = panelWidth - 40;
+        context.fill(x - 8, 18, x + 448, 18 + panelH, 0x77000000);
+        context.fill(x - 8, 18, x + 448, 20, 0xFF3ECF8E);
 
-        int formHeight = 220;
-        int topY = Math.max(35, (height - formHeight) / 2);
+        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 10, 0xFFFFFF);
+        context.drawTextWithShadow(textRenderer, "Rule Name", x, top - 10, 0xA5FFB5);
+        context.drawTextWithShadow(textRenderer, "Entity", x, top + 24, 0xA5FFB5);
+        context.drawTextWithShadow(textRenderer, "Enabled", x, top + 58, 0xA5FFB5);
+        context.drawTextWithShadow(textRenderer, "Spawn Type", x + 104, top + 58, 0xA5FFB5);
+        if (page == 1) {
+            context.drawTextWithShadow(textRenderer, "Refill Mode", x, top + 102, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Max Alive", x, top + 136, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Spawn Count", x + 110, top + 136, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Respawn Seconds", x + 220, top + 136, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Chance (0..1)", x + 330, top + 136, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Failed Spawn Retry Seconds", x, top + 170, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Despawn When Zone Inactive", x + 220, top + 170, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Announce On Spawn", x, top + 204, 0xA5FFB5);
+            if (draft.spawnType == SpawnType.PACK) {
+                context.drawTextWithShadow(textRenderer, "PACK note: TIMED/low respawn can be farmable", x, top + 238, 0xFFAA55);
+            } else {
+                context.drawTextWithShadow(textRenderer, "UNIQUE note: these values are editable; defaults are only presets", x, top + 238, 0xFFCC66);
+            }
+        } else if (page == 2) {
+            context.drawTextWithShadow(textRenderer, "Advanced / Companions", x, top + 102, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "UID64", x, top + 136, 0x888888);
+            context.drawTextWithShadow(textRenderer, "Companions", x, top + 170, 0xA5FFB5);
+        }
 
-        int halfGap = 12;
-        int halfFieldWidth = (contentWidth - halfGap) / 2;
+        if (page == 1 && refillModeButton != null && refillModeButton.getValue() == RefillMode.TIMED) {
+            context.drawTextWithShadow(textRenderer, "TIMED can create farmable zones. Prefer ON_ACTIVATION for normal mobs.", x, height - 70, 0xFFAA55);
+        }
 
-        int panelTop = topY - 18;
-        int panelBottom = topY + formHeight + 12;
+        if (page == 1 && draft.spawnType == SpawnType.PACK && parseInt(respawnField, draft.respawnSeconds) < 300) {
+            context.drawTextWithShadow(textRenderer, "Low respawnSeconds may make this zone farmable.", x, height - 58, 0xFFAA55);
+        }
 
-        // Фон панели
-        context.fill(panelX, panelTop, panelX + panelWidth, panelBottom, 0x66000000);
-
-        // Зеленая акцентная полоса сверху
-        context.fill(panelX, panelTop, panelX + panelWidth, panelTop + 2, 0xFF3ECF8E);
-
-        // Заголовок окна
-        context.drawCenteredTextWithShadow(
-                textRenderer,
-                existingRule == null ? "Add Mob Rule" : "Edit Mob Rule",
-                width / 2,
-                panelTop - 18,
-                0xFFFFFF
-        );
-
-        // Отрисовка лейблов (чуть выше самих полей)
-        drawLabel(context, "Rule ID", contentX, topY);
-        drawLabel(context, "Entity ID", contentX, topY + 44);
-
-        drawLabel(context, "Max Alive", contentX, topY + 88);
-        drawLabel(context, "Spawn Count", contentX + halfFieldWidth + halfGap, topY + 88);
-
-        drawLabel(context, "Respawn Seconds", contentX, topY + 132);
-        drawLabel(context, "Chance 0.0 - 1.0", contentX + halfFieldWidth + halfGap, topY + 132);
-
-        // Отображение Zone ID
-        context.drawTextWithShadow(
-                textRenderer,
-                "Zone: " + zoneId,
-                contentX,
-                panelBottom - 16,
-                0x888888
-        );
-
-        // Отображение ошибки по центру
         if (!error.isBlank()) {
-            context.drawCenteredTextWithShadow(
-                    textRenderer,
-                    error,
-                    width / 2,
-                    topY + 176, // Над кнопками Save/Cancel
-                    0xFF5555
-            );
+            context.drawTextWithShadow(textRenderer, error, x, height - 46, 0xFF5555);
         }
 
         super.render(context, mouseX, mouseY, delta);
     }
 
-    private void drawLabel(DrawContext context, String label, int x, int y) {
-        context.drawTextWithShadow(textRenderer, label, x, y, 0xA5FFB5);
-    }
-
-    private String safeRuleId(MobRule rule) {
-        if (rule.id == null || rule.id.isBlank()) {
-            return "legacy_" + rule.entity.replace(':', '_');
-        }
-
-        return rule.id;
+    private static MobRule cloneRule(MobRule src) {
+        MobRule r = new MobRule();
+        r.id = src.id;
+        r.uid64 = src.uid64;
+        r.name = src.name;
+        r.entity = src.entity;
+        r.enabled = src.enabled;
+        r.spawnType = src.spawnType;
+        r.refillMode = src.refillMode;
+        r.maxAlive = src.maxAlive;
+        r.spawnCount = src.spawnCount;
+        r.respawnSeconds = src.respawnSeconds;
+        r.chance = src.chance;
+        r.cooldownStart = src.cooldownStart;
+        r.spawnWhenReady = src.spawnWhenReady;
+        r.failedSpawnRetrySeconds = src.failedSpawnRetrySeconds;
+        r.despawnWhenZoneInactive = src.despawnWhenZoneInactive;
+        r.announceOnSpawn = src.announceOnSpawn;
+        r.companions = src.companions == null ? new ArrayList<>() : new ArrayList<>(src.companions);
+        return r;
     }
 }
