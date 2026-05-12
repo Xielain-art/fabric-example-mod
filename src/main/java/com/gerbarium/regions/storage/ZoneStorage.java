@@ -6,6 +6,9 @@ import com.gerbarium.regions.model.ZoneDefaults;
 import com.gerbarium.regions.model.ZonesFile;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.IOException;
@@ -201,7 +204,16 @@ public class ZoneStorage {
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(zonesDir, "*.json")) {
             for (Path path : stream) {
                 try (Reader reader = Files.newBufferedReader(path)) {
-                    Zone zone = GSON.fromJson(reader, Zone.class);
+                    JsonElement element = JsonParser.parseReader(reader);
+
+                    if (element == null || !element.isJsonObject()) {
+                        GerbariumRegionsBridge.LOGGER.warn("[Gerbarium] Skipped invalid zone file: {}", path.toAbsolutePath());
+                        continue;
+                    }
+
+                    JsonObject json = element.getAsJsonObject();
+                    RuleJsonMigration.migrateZone(json);
+                    Zone zone = GSON.fromJson(json, Zone.class);
 
                     if (zone == null) {
                         GerbariumRegionsBridge.LOGGER.warn("[Gerbarium] Skipped empty zone file: {}", path.toAbsolutePath());
@@ -228,7 +240,15 @@ public class ZoneStorage {
 
     private ZonesFile loadLegacyRegionsJson() {
         try (Reader reader = Files.newBufferedReader(legacyRegionsPath)) {
-            ZonesFile loaded = GSON.fromJson(reader, ZonesFile.class);
+            JsonElement element = JsonParser.parseReader(reader);
+
+            if (element == null || !element.isJsonObject()) {
+                return emptyZonesFile();
+            }
+
+            JsonObject json = element.getAsJsonObject();
+            RuleJsonMigration.migrateZonesFile(json);
+            ZonesFile loaded = GSON.fromJson(json, ZonesFile.class);
 
             if (loaded == null) {
                 return emptyZonesFile();

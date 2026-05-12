@@ -43,9 +43,9 @@ public class CompanionListScreen extends Screen {
                 client.setScreen(new CompanionEditScreen(this, null, -1))).dimensions(startX, topY, 140, 20).build());
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Done"), b -> {
-            String duplicate = findDuplicateUid();
+            String duplicate = findDuplicateId();
             if (duplicate != null) {
-                error = "Duplicate companion uid64: " + duplicate + ". Companion uid64 values must be unique.";
+                error = "Duplicate companion id: " + duplicate + ". Companion ids must be unique.";
                 return;
             }
             error = "";
@@ -129,7 +129,7 @@ public class CompanionListScreen extends Screen {
                 break;
             }
             CompanionRule c = draft.get(idx);
-            boolean dup = duplicateIds.contains(lowerId(c.uid64));
+            boolean dup = duplicateIds.contains(lowerId(c.id));
             String chance = c.chance >= 1.0 ? "100%" : ((int) Math.round(c.chance * 100)) + "%";
             String title = c.name == null || c.name.isBlank() ? c.id : c.name;
 
@@ -157,11 +157,11 @@ public class CompanionListScreen extends Screen {
         super.render(context, mouseX, mouseY, delta);
     }
 
-    private String findDuplicateUid() {
+    private String findDuplicateId() {
         Map<String, Integer> counts = new HashMap<>();
         duplicateIds = new HashSet<>();
         for (CompanionRule c : draft) {
-            String key = lowerId(c.uid64);
+            String key = lowerId(c.id);
             if (key.isBlank()) {
                 continue;
             }
@@ -169,11 +169,11 @@ public class CompanionListScreen extends Screen {
         }
         String firstDuplicate = null;
         for (CompanionRule c : draft) {
-            String key = lowerId(c.uid64);
+            String key = lowerId(c.id);
             if (!key.isBlank() && counts.getOrDefault(key, 0) > 1) {
                 duplicateIds.add(key);
                 if (firstDuplicate == null) {
-                    firstDuplicate = c.uid64;
+                    firstDuplicate = c.id;
                 }
             }
         }

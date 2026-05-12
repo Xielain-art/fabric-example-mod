@@ -6,7 +6,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class MobRule {
     public String id;
-    public String uid64;
     public String name;
     public String entity;
     public Boolean enabled = true;
@@ -38,8 +37,7 @@ public class MobRule {
     public static MobRule packDefaults(String id, String entity) {
         MobRule rule = new MobRule();
         rule.name = id;
-        rule.uid64 = generateUid64();
-        rule.id = rule.uid64;
+        rule.id = generateId();
         rule.entity = entity;
         rule.enabled = true;
         rule.spawnType = SpawnType.PACK;
@@ -59,8 +57,7 @@ public class MobRule {
     public static MobRule uniqueDefaults(String id, String entity) {
         MobRule rule = new MobRule();
         rule.name = id;
-        rule.uid64 = generateUid64();
-        rule.id = rule.uid64;
+        rule.id = generateId();
         rule.entity = entity;
         rule.enabled = true;
         rule.spawnType = SpawnType.UNIQUE;
@@ -77,7 +74,7 @@ public class MobRule {
         return rule;
     }
 
-    public static String generateUid64() {
+    public static String generateId() {
         return String.format("%016x", ThreadLocalRandom.current().nextLong());
     }
 }

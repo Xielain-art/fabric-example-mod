@@ -168,9 +168,9 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
                 .dimensions(x + 188, y, 120, 20).build());
 
         int y2 = y + rowH;
-        addDrawableChild(ButtonWidget.builder(Text.literal("UID64"), b -> {})
+        addDrawableChild(ButtonWidget.builder(Text.literal("ID"), b -> {})
                 .dimensions(x, y2, 80, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal(draft.uid64 == null ? "" : draft.uid64), b -> {})
+        addDrawableChild(ButtonWidget.builder(Text.literal(draft.id == null ? "" : draft.id), b -> {})
                 .dimensions(x + 84, y2, formW - 84, 20).build());
 
         int y3 = y2 + rowH;
@@ -283,7 +283,7 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
             }
         } else if (page == 2) {
             context.drawTextWithShadow(textRenderer, "Companions", startX, dynY - 11, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "UID64", startX, dynY + rowH - 11, 0x888888);
+            context.drawTextWithShadow(textRenderer, "ID", startX, dynY + rowH - 11, 0x888888);
             context.drawTextWithShadow(textRenderer, "Advanced Controls", startX, dynY + rowH * 2 - 11, 0xA5FFB5);
         }
 
@@ -308,7 +308,6 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
     private static MobRule cloneRule(MobRule src) {
         MobRule r = new MobRule();
         r.id = src.id;
-        r.uid64 = src.uid64;
         r.name = src.name;
         r.entity = src.entity;
         r.enabled = src.enabled;

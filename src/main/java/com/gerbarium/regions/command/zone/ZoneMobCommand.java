@@ -224,8 +224,7 @@ public final class ZoneMobCommand {
         Optional<MobRule> or = findRule(oz.get(), ruleId);
         if (or.isEmpty()) { CommandFeedback.error(source, "Mob rule not found: " + ruleId); return 0; }
         CompanionRule c = new CompanionRule();
-        c.uid64 = CompanionRule.generateUid64();
-        c.id = c.uid64;
+        c.id = CompanionRule.generateId();
         c.name = companionId;
         c.entity = entity;
         c.count = count;
@@ -286,7 +285,6 @@ public final class ZoneMobCommand {
     private static boolean matchesRule(MobRule rule, String key) {
         return key != null && (
                 key.equalsIgnoreCase(rule.id)
-                        || key.equalsIgnoreCase(rule.uid64)
                         || key.equalsIgnoreCase(rule.name)
         );
     }
@@ -294,7 +292,6 @@ public final class ZoneMobCommand {
     private static boolean matchesCompanion(CompanionRule rule, String key) {
         return key != null && (
                 key.equalsIgnoreCase(rule.id)
-                        || key.equalsIgnoreCase(rule.uid64)
                         || key.equalsIgnoreCase(rule.name)
         );
     }

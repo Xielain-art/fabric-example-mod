@@ -34,14 +34,10 @@ public final class ZoneDefaults {
     }
 
     public static void normalizeMobRule(MobRule rule) {
-        boolean legacyIdentity = rule.uid64 == null || rule.uid64.isBlank();
-        if (rule.uid64 == null || rule.uid64.isBlank()) {
-            rule.uid64 = rule.id != null && !rule.id.isBlank() ? rule.id : MobRule.generateUid64();
-        }
         if (rule.id == null || rule.id.isBlank()) {
-            rule.id = rule.uid64;
+            rule.id = MobRule.generateId();
         }
-        if (legacyIdentity && (rule.name == null || rule.name.isBlank())) {
+        if (rule.name == null || rule.name.isBlank()) {
             rule.name = rule.id;
         }
         if (rule.enabled == null) {
@@ -142,8 +138,8 @@ public final class ZoneDefaults {
     }
 
     public static void validateMobRule(MobRule rule) {
-        if (rule.uid64 == null || rule.uid64.isBlank()) {
-            throw new IllegalArgumentException("Rule uid64 cannot be empty");
+        if (rule.id == null || rule.id.isBlank()) {
+            throw new IllegalArgumentException("Rule id cannot be empty");
         }
         if (rule.name == null || rule.name.isBlank()) {
             throw new IllegalArgumentException("Rule name cannot be empty");
@@ -172,22 +168,18 @@ public final class ZoneDefaults {
         HashSet<String> ids = new HashSet<>();
         for (CompanionRule companion : rule.companions) {
             validateCompanionRule(companion);
-            String lowered = companion.uid64.toLowerCase();
+            String lowered = companion.id.toLowerCase();
             if (!ids.add(lowered)) {
-                throw new IllegalArgumentException("Companion uid64 must be unique inside mob rule: " + companion.uid64);
+                throw new IllegalArgumentException("Companion id must be unique inside mob rule: " + companion.id);
             }
         }
     }
 
     public static void normalizeCompanionRule(CompanionRule rule) {
-        boolean legacyIdentity = rule.uid64 == null || rule.uid64.isBlank();
-        if (rule.uid64 == null || rule.uid64.isBlank()) {
-            rule.uid64 = rule.id != null && !rule.id.isBlank() ? rule.id : CompanionRule.generateUid64();
-        }
         if (rule.id == null || rule.id.isBlank()) {
-            rule.id = rule.uid64;
+            rule.id = CompanionRule.generateId();
         }
-        if (legacyIdentity && (rule.name == null || rule.name.isBlank())) {
+        if (rule.name == null || rule.name.isBlank()) {
             rule.name = rule.id;
         }
         if (rule.count < 1) {
@@ -202,8 +194,8 @@ public final class ZoneDefaults {
     }
 
     public static void validateCompanionRule(CompanionRule rule) {
-        if (rule.uid64 == null || rule.uid64.isBlank()) {
-            throw new IllegalArgumentException("Companion uid64 cannot be empty");
+        if (rule.id == null || rule.id.isBlank()) {
+            throw new IllegalArgumentException("Companion id cannot be empty");
         }
         if (rule.name == null || rule.name.isBlank()) {
             throw new IllegalArgumentException("Companion name cannot be empty");

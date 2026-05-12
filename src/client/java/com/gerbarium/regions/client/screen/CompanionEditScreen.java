@@ -27,8 +27,7 @@ public class CompanionEditScreen extends Screen implements EntitySelectionConsum
         this.editIndex = editIndex;
         this.draft = existing == null ? new CompanionRule() : copy(existing);
         if (existing == null) {
-            this.draft.uid64 = CompanionRule.generateUid64();
-            this.draft.id = this.draft.uid64;
+            this.draft.id = CompanionRule.generateId();
         }
         if (this.draft.entity == null || this.draft.entity.isBlank()) {
             this.draft.entity = "minecraft:zombie";
@@ -103,9 +102,8 @@ public class CompanionEditScreen extends Screen implements EntitySelectionConsum
 
     private void save() {
         capture();
-        if (draft.uid64 == null || draft.uid64.isBlank()) {
-            draft.uid64 = CompanionRule.generateUid64();
-            draft.id = draft.uid64;
+        if (draft.id == null || draft.id.isBlank()) {
+            draft.id = CompanionRule.generateId();
         }
         try {
             ZoneDefaults.validateCompanionRule(draft);
@@ -155,7 +153,7 @@ public class CompanionEditScreen extends Screen implements EntitySelectionConsum
 
         // Блок Advanced
         if (advancedView) {
-            context.drawTextWithShadow(textRenderer, "UID64: " + (draft.uid64 == null ? "" : draft.uid64), startX, yOffset + 30, 0x888888);
+            context.drawTextWithShadow(textRenderer, "ID: " + (draft.id == null ? "" : draft.id), startX, yOffset + 30, 0x888888);
         }
 
         // Блок с ошибкой (центрируется над кнопками)
@@ -169,7 +167,6 @@ public class CompanionEditScreen extends Screen implements EntitySelectionConsum
     private static CompanionRule copy(CompanionRule src) {
         CompanionRule c = new CompanionRule();
         c.id = src.id;
-        c.uid64 = src.uid64;
         c.name = src.name;
         c.entity = src.entity;
         c.count = src.count;

@@ -4,14 +4,13 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class CompanionRule {
     public String id;
-    public String uid64;
     public String name;
     public String entity;
     public int count = 1;
     public int radius = 8;
     public double chance = 1.0;
 
-    public static String generateUid64() {
+    public static String generateId() {
         return String.format("%016x", ThreadLocalRandom.current().nextLong());
     }
 }
