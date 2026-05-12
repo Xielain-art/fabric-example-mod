@@ -38,31 +38,50 @@ public class CompanionEditScreen extends Screen implements EntitySelectionConsum
     @Override
     protected void init() {
         clearChildren();
-        int x = width / 2 - 170;
-        int y = 40;
-        idField = field(x, y, 340, draft.name == null ? "" : draft.name);
-        entityField = field(x, y += 30, 244, draft.entity);
-        countField = field(x, y += 30, 80, String.valueOf(draft.count));
-        radiusField = field(x + 84, y, 80, String.valueOf(draft.radius));
-        chanceField = field(x + 168, y, 76, String.valueOf(draft.chance));
 
+        // Централизация и сетка
+        int formWidth = 340;
+        int startX = (width - formWidth) / 2;
+        int yOffset = 45;
+        int rowSpacing = 40;
+
+        // Строка 1: Имя и кнопка Advanced
+        idField = field(startX, yOffset, 244, draft.name == null ? "" : draft.name);
         addDrawableChild(idField);
+        addDrawableChild(ButtonWidget.builder(Text.literal(advancedView ? "Advanced: On" : "Advanced: Off"), b -> {
+            advancedView = !advancedView;
+            init();
+        }).dimensions(startX + 248, yOffset, 92, 20).build());
+
+        // Строка 2: Сущность и кнопка Pick Entity
+        yOffset += rowSpacing;
+        entityField = field(startX, yOffset, 244, draft.entity);
         addDrawableChild(entityField);
+        addDrawableChild(ButtonWidget.builder(Text.literal("Pick Entity"), b -> {
+            capture();
+            client.setScreen(new EntityPickerScreen(this, this, draft.entity));
+        }).dimensions(startX + 248, yOffset, 92, 20).build());
+
+        // Строка 3: Параметры (Count, Radius, Chance) - разделены на 3 равные колонки
+        yOffset += rowSpacing;
+        int col1 = 110;
+        int col2 = 110;
+        int col3 = 112; // 110 + 110 + 112 + 8 (отступы) = 340
+
+        countField = field(startX, yOffset, col1, String.valueOf(draft.count));
+        radiusField = field(startX + col1 + 4, yOffset, col2, String.valueOf(draft.radius));
+        chanceField = field(startX + col1 + col2 + 8, yOffset, col3, String.valueOf(draft.chance));
+
         addDrawableChild(countField);
         addDrawableChild(radiusField);
         addDrawableChild(chanceField);
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Pick Entity"), b -> {
-            capture();
-            client.setScreen(new EntityPickerScreen(this, this, draft.entity));
-        }).dimensions(x + 248, 70, 92, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal(advancedView ? "Advanced: On" : "Advanced: Off"), b -> {
-            advancedView = !advancedView;
-            init();
-        }).dimensions(x + 248, 40, 92, 20).build());
-
-        addDrawableChild(ButtonWidget.builder(Text.literal("Save"), b -> save()).dimensions(x, height - 30, 166, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Cancel"), b -> client.setScreen(parent)).dimensions(x + 174, height - 30, 166, 20).build());
+        // Футер: Кнопки сохранения и отмены
+        int footerY = height - 35;
+        addDrawableChild(ButtonWidget.builder(Text.literal("Save"), b -> save())
+                .dimensions(startX, footerY, 168, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Cancel"), b -> client.setScreen(parent))
+                .dimensions(startX + 172, footerY, 168, 20).build());
     }
 
     private TextFieldWidget field(int x, int y, int w, String value) {
@@ -110,19 +129,40 @@ public class CompanionEditScreen extends Screen implements EntitySelectionConsum
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
-        int x = width / 2 - 170;
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 12, 0xFFFFFF);
-        context.drawTextWithShadow(textRenderer, "Companion Name", x, 30, 0xA5FFB5);
-        context.drawTextWithShadow(textRenderer, "Entity", x, 60, 0xA5FFB5);
-        context.drawTextWithShadow(textRenderer, "Count", x, 90, 0xA5FFB5);
-        context.drawTextWithShadow(textRenderer, "Radius", x + 84, 90, 0xA5FFB5);
-        context.drawTextWithShadow(textRenderer, "Chance", x + 168, 90, 0xA5FFB5);
+
+        int formWidth = 340;
+        int startX = (width - formWidth) / 2;
+        int yOffset = 45;
+        int rowSpacing = 40;
+
+        // Заголовок
+        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 15, 0xFFFFFF);
+
+        // Подписи 1 строки
+        context.drawTextWithShadow(textRenderer, "Companion Name", startX, yOffset - 11, 0xA5FFB5);
+
+        // Подписи 2 строки
+        yOffset += rowSpacing;
+        context.drawTextWithShadow(textRenderer, "Entity", startX, yOffset - 11, 0xA5FFB5);
+
+        // Подписи 3 строки
+        yOffset += rowSpacing;
+        int col1 = 110;
+        int col2 = 110;
+        context.drawTextWithShadow(textRenderer, "Count", startX, yOffset - 11, 0xA5FFB5);
+        context.drawTextWithShadow(textRenderer, "Radius", startX + col1 + 4, yOffset - 11, 0xA5FFB5);
+        context.drawTextWithShadow(textRenderer, "Chance", startX + col1 + col2 + 8, yOffset - 11, 0xA5FFB5);
+
+        // Блок Advanced
         if (advancedView) {
-            context.drawTextWithShadow(textRenderer, "UID64: " + (draft.uid64 == null ? "" : draft.uid64), x, 120, 0x888888);
+            context.drawTextWithShadow(textRenderer, "UID64: " + (draft.uid64 == null ? "" : draft.uid64), startX, yOffset + 30, 0x888888);
         }
+
+        // Блок с ошибкой (центрируется над кнопками)
         if (!error.isBlank()) {
-            context.drawTextWithShadow(textRenderer, error, x, height - 44, 0xFF5555);
+            context.drawCenteredTextWithShadow(textRenderer, error, width / 2, height - 55, 0xFF5555);
         }
+
         super.render(context, mouseX, mouseY, delta);
     }
 

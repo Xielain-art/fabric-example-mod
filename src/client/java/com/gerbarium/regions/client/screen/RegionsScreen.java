@@ -21,50 +21,91 @@ public class RegionsScreen extends Screen {
     protected void init() {
         clearChildren();
 
-        int listX = width / 2 - 170;
-        int listY = 50;
-        int listW = 340;
-        int rowH = 24;
-        int visible = Math.max(1, (height - 130) / rowH);
-        pageSize = visible;
+        // Основные параметры панели
+        int panelWidth = 400;
+        int startX = (width - panelWidth) / 2;
+        int topY = 25;
 
+        // Кнопка Refresh в правом верхнем углу панели
         addDrawableChild(ButtonWidget.builder(Text.literal("Refresh"), b -> GerbariumClientNetworking.requestZones())
-                .dimensions(width / 2 - 170, 20, 110, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Close"), b -> close())
-                .dimensions(width / 2 + 60, 20, 110, 20).build());
+                .dimensions(startX + panelWidth - 80, topY, 80, 20).build());
+
+        // Расчет сетки списка
+        int listY = topY + 30; // Отступ под заголовок и кнопку Refresh
+        int bottomSpace = 85;  // Отступ снизу для пагинации и кнопки Close
+        int rowH = 24;
+
+        pageSize = Math.max(1, (height - listY - bottomSpace) / rowH);
 
         int total = ClientGerbariumData.zonesFile().zones.size();
         totalRows = total;
-        page = Math.max(0, Math.min(page, Math.max(0, (total - 1) / visible)));
+        page = Math.max(0, Math.min(page, Math.max(0, (total - 1) / pageSize)));
 
-        if (total > visible) {
+        // Пагинация (Центрирована под списком)
+        if (total > pageSize) {
+            int maxPage = (total - 1) / pageSize;
+            int pagY = listY + pageSize * rowH + 6;
+            int pageBtnWidth = 100;
+            int centerStartX = width / 2 - (pageBtnWidth + 56) / 2; // 56 = ширина кнопок со стрелками и отступов
+
             addDrawableChild(ButtonWidget.builder(Text.literal("<"), b -> { page = Math.max(0, page - 1); init(); })
-                    .dimensions(width / 2 - 80, height - 32, 24, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal(">"), b -> { page = Math.min(Math.max(0, (total - 1) / visible), page + 1); init(); })
-                    .dimensions(width / 2 + 56, height - 32, 24, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal("Page " + (page + 1) + "/" + ((total - 1) / visible + 1)), b -> {})
-                    .dimensions(width / 2 - 50, height - 32, 100, 20).build());
+                    .dimensions(centerStartX, pagY, 24, 20).build());
+
+            addDrawableChild(ButtonWidget.builder(Text.literal("Page " + (page + 1) + " / " + (maxPage + 1)), b -> {})
+                    .dimensions(centerStartX + 28, pagY, pageBtnWidth, 20).build());
+
+            addDrawableChild(ButtonWidget.builder(Text.literal(">"), b -> { page = Math.min(maxPage, page + 1); init(); })
+                    .dimensions(centerStartX + 32 + pageBtnWidth, pagY, 24, 20).build());
         }
 
-        int start = page * visible;
-        for (int i = 0; i < visible; i++) {
+        // Кнопки зон
+        int start = page * pageSize;
+        for (int i = 0; i < pageSize; i++) {
             int idx = start + i;
             if (idx >= total) break;
             Zone zone = ClientGerbariumData.zonesFile().zones.get(idx);
-            int y = listY + i * rowH;
-            addDrawableChild(ButtonWidget.builder(Text.literal(zone.id + (zone.enabled ? "" : " [OFF]")), b -> {
+            int rowY = listY + i * rowH;
+
+            String label = zone.id + (zone.enabled ? "" : " [OFF]");
+            // Защита от слишком длинных названий
+            if (textRenderer.getWidth(label) > panelWidth - 16) {
+                label = textRenderer.trimToWidth(label, panelWidth - 24) + "...";
+            }
+
+            addDrawableChild(ButtonWidget.builder(Text.literal(label), b -> {
                 client.setScreen(new ZoneDetailsScreen(zone.id));
-            }).dimensions(listX, y, listW, 20).build());
+            }).dimensions(startX, rowY, panelWidth, 20).build());
         }
+
+        // Кнопка закрытия окна (Футер)
+        int closeWidth = 160;
+        addDrawableChild(ButtonWidget.builder(Text.literal("Close"), b -> close())
+                .dimensions(width / 2 - closeWidth / 2, height - 35, closeWidth, 20).build());
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 8, 0xFFFFFF);
+
+        // Отрисовка подложки окна
+        int panelWidth = 400;
+        int startX = (width - panelWidth) / 2;
+        int padding = 12;
+        int panelTop = 15;
+        int panelBottom = height - 15;
+
+        // Темный фон
+        context.fill(startX - padding, panelTop, startX + panelWidth + padding, panelBottom, 0x88000000);
+        // Акцентная линия сверху
+        context.fill(startX - padding, panelTop, startX + panelWidth + padding, panelTop + 2, 0xFF3ECF8E);
+
+        // Заголовок (Выровнен по левому краю внутри панели, рядом с кнопкой Refresh)
+        context.drawTextWithShadow(textRenderer, title.getString(), startX, panelTop + 15, 0xFFFFFF);
+
         if (ClientGerbariumData.zonesFile().zones.isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, "No zones found. Use /gerb zone create <id>", width / 2, height / 2, 0xFFAAAA);
+            context.drawCenteredTextWithShadow(textRenderer, "No zones found. Use /gerb zone create <id>", width / 2, height / 2 - 10, 0xFFAAAA);
         }
+
         super.render(context, mouseX, mouseY, delta);
     }
 

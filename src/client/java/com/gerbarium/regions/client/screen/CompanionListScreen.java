@@ -33,11 +33,15 @@ public class CompanionListScreen extends Screen {
     @Override
     protected void init() {
         clearChildren();
-        int x = width / 2 - 220;
-        int y = 36;
 
+        int listWidth = 440;
+        int startX = (width - listWidth) / 2;
+        int topY = 30;
+
+        // Верхняя панель: Добавить и Готово
         addDrawableChild(ButtonWidget.builder(Text.literal("Add Companion"), b ->
-                client.setScreen(new CompanionEditScreen(this, null, -1))).dimensions(x, y, 140, 20).build());
+                client.setScreen(new CompanionEditScreen(this, null, -1))).dimensions(startX, topY, 140, 20).build());
+
         addDrawableChild(ButtonWidget.builder(Text.literal("Done"), b -> {
             String duplicate = findDuplicateUid();
             if (duplicate != null) {
@@ -47,35 +51,53 @@ public class CompanionListScreen extends Screen {
             error = "";
             parent.setCompanions(draft);
             client.setScreen(parent);
-        }).dimensions(x + 300, y, 140, 20).build());
+        }).dimensions(startX + listWidth - 140, topY, 140, 20).build());
 
-        y += 30;
-        int rowH = 24;
-        int maxVisible = Math.max(1, (height - 120) / rowH);
-        pageSize = maxVisible;
-        page = Math.max(0, Math.min(page, Math.max(0, (draft.size() - 1) / maxVisible)));
+        // Настройки списка и пагинации
+        int rowH = 26; // Высота строки (20px кнопка + 6px отступ)
+        int listStartY = 85; // Отступ сверху до начала элементов списка
+        int listEndY = height - 60; // Оставляем место для футера и ошибок
 
-        if (draft.size() > maxVisible) {
-            int maxPage = (draft.size() - 1) / maxVisible;
-            addDrawableChild(ButtonWidget.builder(Text.literal("<"), b -> { page = Math.max(0, page - 1); init(); }).dimensions(x + 220, 36, 24, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal(">"), b -> { page = Math.min(maxPage, page + 1); init(); }).dimensions(x + 374, 36, 24, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal("Page " + (page + 1) + "/" + (maxPage + 1)), b -> {}).dimensions(x + 248, 36, 122, 20).build());
+        pageSize = Math.max(1, (listEndY - listStartY) / rowH);
+        page = Math.max(0, Math.min(page, Math.max(0, (draft.size() - 1) / pageSize)));
+
+        // Панель пагинации (центрированная)
+        if (draft.size() > pageSize) {
+            int maxPage = (draft.size() - 1) / pageSize;
+            int pageBtnWidth = 100;
+            int centerStartX = width / 2 - (pageBtnWidth + 56) / 2; // 56 = ширина кнопок со стрелками и отступов
+
+            addDrawableChild(ButtonWidget.builder(Text.literal("<"), b -> { page = Math.max(0, page - 1); init(); })
+                    .dimensions(centerStartX, 55, 24, 20).build());
+
+            // Кнопка-индикатор (просто для отображения текста в едином стиле)
+            addDrawableChild(ButtonWidget.builder(Text.literal("Page " + (page + 1) + " / " + (maxPage + 1)), b -> {})
+                    .dimensions(centerStartX + 28, 55, pageBtnWidth, 20).build());
+
+            addDrawableChild(ButtonWidget.builder(Text.literal(">"), b -> { page = Math.min(maxPage, page + 1); init(); })
+                    .dimensions(centerStartX + 32 + pageBtnWidth, 55, 24, 20).build());
         }
 
-        int start = page * maxVisible;
-        for (int i = 0; i < maxVisible; i++) {
+        // Рендер кнопок для элементов списка
+        int start = page * pageSize;
+        for (int i = 0; i < pageSize; i++) {
             int idxData = start + i;
             if (idxData >= draft.size()) {
                 break;
             }
             CompanionRule c = draft.get(idxData);
-            int rowY = y + i * 24;
-            int idx = idxData;
-            addDrawableChild(ButtonWidget.builder(Text.literal("Edit"), b -> client.setScreen(new CompanionEditScreen(this, c, idx))).dimensions(x + 330, rowY, 50, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal("Remove"), b -> { draft.remove(idx); init(); }).dimensions(x + 384, rowY, 56, 20).build());
+            int rowY = listStartY + i * rowH;
+
+            // Кнопки прижаты к правому краю
+            addDrawableChild(ButtonWidget.builder(Text.literal("Edit"), b -> client.setScreen(new CompanionEditScreen(this, c, idxData)))
+                    .dimensions(startX + listWidth - 116, rowY, 52, 20).build());
+            addDrawableChild(ButtonWidget.builder(Text.literal("Remove"), b -> { draft.remove(idxData); init(); })
+                    .dimensions(startX + listWidth - 60, rowY, 60, 20).build());
         }
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> client.setScreen(parent)).dimensions(width / 2 - 60, height - 30, 120, 20).build());
+        // Футер
+        addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> client.setScreen(parent))
+                .dimensions(width / 2 - 75, height - 35, 150, 20).build());
     }
 
     public void upsertCompanion(CompanionRule rule, int index) {
@@ -91,14 +113,17 @@ public class CompanionListScreen extends Screen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
-        int x = width / 2 - 220;
-        int y = 70;
+
+        int listWidth = 440;
+        int startX = (width - listWidth) / 2;
+        int listStartY = 85;
+        int rowH = 26;
+
         String titleLabel = ruleId == null || ruleId.isBlank() ? "(rule)" : ruleId;
-        context.drawCenteredTextWithShadow(textRenderer, "Companions for: " + titleLabel, width / 2, 10, 0xFFFFFF);
-        int rowH = 24;
-        int maxVisible = Math.max(1, (height - 120) / rowH);
-        int start = page * maxVisible;
-        for (int i = 0; i < maxVisible; i++) {
+        context.drawCenteredTextWithShadow(textRenderer, "Companions for: " + titleLabel, width / 2, 12, 0xFFFFFF);
+
+        int start = page * pageSize;
+        for (int i = 0; i < pageSize; i++) {
             int idx = start + i;
             if (idx >= draft.size()) {
                 break;
@@ -107,15 +132,28 @@ public class CompanionListScreen extends Screen {
             boolean dup = duplicateIds.contains(lowerId(c.uid64));
             String chance = c.chance >= 1.0 ? "100%" : ((int) Math.round(c.chance * 100)) + "%";
             String title = c.name == null || c.name.isBlank() ? c.id : c.name;
-            context.drawTextWithShadow(textRenderer, title + " -> " + c.entity + " | count " + c.count + " | radius " + c.radius + " | chance " + chance, x, y, dup ? 0xFF7777 : 0xDDDDDD);
-            y += 24;
+
+            String text = title + " -> " + c.entity + " | count " + c.count + " | radius " + c.radius + " | chance " + chance;
+
+            // Обрезаем текст, чтобы он не залезал на кнопки Edit и Remove
+            int maxTextWidth = listWidth - 125;
+            if (textRenderer.getWidth(text) > maxTextWidth) {
+                text = textRenderer.trimToWidth(text, maxTextWidth - 10) + "...";
+            }
+
+            int rowY = listStartY + i * rowH;
+            // +6 к Y для выравнивания текста по центру относительно кнопки высотой 20px
+            context.drawTextWithShadow(textRenderer, text, startX, rowY + 6, dup ? 0xFF7777 : 0xDDDDDD);
         }
+
         if (draft.isEmpty()) {
-            context.drawTextWithShadow(textRenderer, "No companions", x, y, 0xAAAAAA);
+            context.drawCenteredTextWithShadow(textRenderer, "No companions added", width / 2, listStartY + 20, 0xAAAAAA);
         }
+
         if (!error.isBlank()) {
-            context.drawTextWithShadow(textRenderer, error, x, height - 46, 0xFF5555);
+            context.drawCenteredTextWithShadow(textRenderer, error, width / 2, height - 55, 0xFF5555);
         }
+
         super.render(context, mouseX, mouseY, delta);
     }
 
