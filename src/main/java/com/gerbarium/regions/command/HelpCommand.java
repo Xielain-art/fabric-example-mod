@@ -66,7 +66,7 @@ public final class HelpCommand {
         CommandFeedback.send(source, "/gerb zone mob companion list <zone> <ruleName>");
         CommandFeedback.send(source, "/gerb zone mob companion info <zone> <ruleName> <companionName>");
         CommandFeedback.send(source, "/gerb zone clear <zone> - remove mobs tagged as gerb_zone_<zone>");
-        CommandFeedback.send(source, "/gerb zone reload - reload regions.json");
+        CommandFeedback.send(source, "/gerb zone reload - reload zone config files");
         CommandFeedback.send(source, "UI uses rule names; rule ids are shown in advanced/view mode.");
     }
 }

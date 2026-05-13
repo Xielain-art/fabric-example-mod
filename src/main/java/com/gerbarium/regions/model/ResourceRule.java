@@ -33,6 +33,9 @@ public class ResourceRule {
     public boolean preventPlayerPlacedBlocks = true;
     public boolean allowBlockEntities = false;
 
+    public PlacementMode placementMode = PlacementMode.RANDOM_SCATTER;
+    public int minDistanceBetweenResources = 3;
+
     public ResourceRule() {
     }
 

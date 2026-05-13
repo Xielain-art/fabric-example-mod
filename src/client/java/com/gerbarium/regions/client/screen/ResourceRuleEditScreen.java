@@ -1,6 +1,7 @@
 package com.gerbarium.regions.client.screen;
 
 import com.gerbarium.regions.client.network.GerbariumClientNetworking;
+import com.gerbarium.regions.model.PlacementMode;
 import com.gerbarium.regions.model.ReplaceMode;
 import com.gerbarium.regions.model.ResourceActivationMode;
 import com.gerbarium.regions.model.ResourceRule;
@@ -216,7 +217,7 @@ public class ResourceRuleEditScreen extends Screen {
         addDrawableChild(maxYField);
 
         replaceModeButton = addDrawableChild(CyclingButtonWidget.<ReplaceMode>builder(v -> Text.literal(v.name()))
-                .values(List.of(ReplaceMode.ONLY_TARGET_BLOCKS))
+                .values(List.of(ReplaceMode.ONLY_TARGET_BLOCKS, ReplaceMode.AIR_OR_REPLACEABLE, ReplaceMode.TARGET_BLOCKS_OR_AIR))
                 .initially(draft.replaceMode)
                 .build(startX, topY + rowH * 3, 240, 20, Text.literal("Replace Mode"), (b, v) -> {}));
 
@@ -387,6 +388,8 @@ public class ResourceRuleEditScreen extends Screen {
         r.restoreIfNotMined = src.restoreIfNotMined;
         r.preventPlayerPlacedBlocks = src.preventPlayerPlacedBlocks;
         r.allowBlockEntities = src.allowBlockEntities;
+        r.placementMode = src.placementMode;
+        r.minDistanceBetweenResources = src.minDistanceBetweenResources;
         return r;
     }
 }

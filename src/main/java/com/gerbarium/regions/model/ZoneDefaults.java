@@ -296,6 +296,12 @@ public final class ZoneDefaults {
             rule.minY = rule.maxY;
             rule.maxY = tmp;
         }
+        if (rule.placementMode == null) {
+            rule.placementMode = PlacementMode.RANDOM_SCATTER;
+        }
+        if (rule.minDistanceBetweenResources < 0) {
+            rule.minDistanceBetweenResources = 3;
+        }
         for (WeightedBlock wb : rule.resourceBlocks) {
             if (wb.block == null) {
                 wb.block = "";

@@ -39,7 +39,7 @@ public final class ZoneCreateCommand {
                                 storage.reload();
 
                                 CommandFeedback.send(context.getSource(), "Created zone '" + id + "' from WorldEdit selection.");
-                                CommandFeedback.send(context.getSource(), "Saved to config/gerbarium/zones/" + id + ".json");
+                                CommandFeedback.send(context.getSource(), "Saved to config/gerbarium/zones/" + id + "/zone.json");
                                 CommandFeedback.send(context.getSource(), "Use /gerb zone gui " + id + " to edit it.");
 
                                 return 1;
