@@ -86,7 +86,6 @@ public final class ZoneDefaults {
         if (rule.cooldownStart == null) {
             rule.cooldownStart = CooldownStart.AFTER_ACTIVATION;
         }
-        rule.cooldownStart = CooldownStart.AFTER_ACTIVATION;
         if (rule.maxAlive < 1) {
             rule.maxAlive = 10;
         }
