@@ -2,6 +2,7 @@ package com.gerbarium.regions.model;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.regex.Pattern;
 
 public final class ZoneDefaults {
@@ -21,6 +22,9 @@ public final class ZoneDefaults {
     }
 
     public static void normalizeZone(Zone zone) {
+        if (zone.name == null || zone.name.isBlank()) {
+            zone.name = zone.id;
+        }
         if (zone.activation == null) {
             zone.activation = defaultActivation();
         }
@@ -32,6 +36,12 @@ public final class ZoneDefaults {
         }
         for (MobRule rule : zone.mobs) {
             normalizeMobRule(rule);
+        }
+        if (zone.resources == null) {
+            zone.resources = new ArrayList<>();
+        }
+        for (ResourceRule rule : zone.resources) {
+            normalizeResourceRule(rule);
         }
     }
 
@@ -138,6 +148,10 @@ public final class ZoneDefaults {
             validateMobRule(mob);
             normalizeMobRule(mob);
         }
+        for (ResourceRule res : zone.resources) {
+            validateResourceRule(res);
+            normalizeResourceRule(res);
+        }
     }
 
     public static void validateMobRule(MobRule rule) {
@@ -235,6 +249,125 @@ public final class ZoneDefaults {
 
     public static String defaultBoundaryModeFor(SpawnType spawnType) {
         return spawnType == SpawnType.UNIQUE ? MobRule.BOUNDARY_TELEPORT_BACK : MobRule.BOUNDARY_LEASH;
+    }
+
+    public static void normalizeResourceRule(ResourceRule rule) {
+        if (rule.id == null || rule.id.isBlank()) {
+            rule.id = ResourceRule.generateId();
+        }
+        if (rule.name == null || rule.name.isBlank()) {
+            rule.name = rule.id;
+        }
+        if (rule.targetBlocks == null) {
+            rule.targetBlocks = new ArrayList<>();
+        }
+        if (rule.resourceBlocks == null) {
+            rule.resourceBlocks = new ArrayList<>();
+        }
+        if (rule.maxActiveBlocks < 0) {
+            rule.maxActiveBlocks = 12;
+        }
+        if (rule.spawnCount < 0) {
+            rule.spawnCount = 3;
+        }
+        if (rule.respawnSeconds < 1) {
+            rule.respawnSeconds = 900;
+        }
+        if (rule.chance < 0.0 || rule.chance > 1.0) {
+            rule.chance = 1.0;
+        }
+        if (rule.replaceMode == null) {
+            rule.replaceMode = ReplaceMode.ONLY_TARGET_BLOCKS;
+        }
+        if (rule.restoreMode == null) {
+            rule.restoreMode = RestoreMode.RESTORE_ORIGINAL;
+        }
+        if (rule.activationMode == null) {
+            rule.activationMode = ResourceActivationMode.REAL_TIME;
+        }
+        if (rule.restoreDelaySeconds < 0) {
+            rule.restoreDelaySeconds = 300;
+        }
+        if (rule.maxPositionAttempts < 1) {
+            rule.maxPositionAttempts = 64;
+        }
+        if (rule.minY > rule.maxY) {
+            int tmp = rule.minY;
+            rule.minY = rule.maxY;
+            rule.maxY = tmp;
+        }
+        for (WeightedBlock wb : rule.resourceBlocks) {
+            if (wb.block == null) {
+                wb.block = "";
+            }
+            if (wb.weight < 1) {
+                wb.weight = 1;
+            }
+        }
+    }
+
+    public static void validateResourceRule(ResourceRule rule) {
+        if (rule.id == null || rule.id.isBlank()) {
+            throw new IllegalArgumentException("Resource rule id cannot be empty");
+        }
+        if (rule.name == null || rule.name.isBlank()) {
+            throw new IllegalArgumentException("Resource rule name cannot be empty");
+        }
+        if (rule.resourceBlocks == null || rule.resourceBlocks.isEmpty()) {
+            throw new IllegalArgumentException("resourceBlocks cannot be empty");
+        }
+        for (WeightedBlock wb : rule.resourceBlocks) {
+            if (wb.block == null || wb.block.isBlank()) {
+                throw new IllegalArgumentException("resourceBlocks entry block cannot be empty");
+            }
+            if (wb.weight < 1) {
+                throw new IllegalArgumentException("resourceBlocks weight must be >= 1");
+            }
+        }
+        if (rule.replaceMode == ReplaceMode.ONLY_TARGET_BLOCKS && (rule.targetBlocks == null || rule.targetBlocks.isEmpty())) {
+            throw new IllegalArgumentException("targetBlocks cannot be empty when replaceMode is ONLY_TARGET_BLOCKS");
+        }
+        if (rule.maxActiveBlocks < 0) {
+            throw new IllegalArgumentException("maxActiveBlocks must be >= 0");
+        }
+        if (rule.spawnCount < 0) {
+            throw new IllegalArgumentException("spawnCount must be >= 0");
+        }
+        if (rule.respawnSeconds < 1) {
+            throw new IllegalArgumentException("respawnSeconds must be >= 1");
+        }
+        if (rule.chance < 0.0 || rule.chance > 1.0) {
+            throw new IllegalArgumentException("chance must be 0..1");
+        }
+        if (rule.minY > rule.maxY) {
+            throw new IllegalArgumentException("minY must be <= maxY");
+        }
+        if (rule.restoreDelaySeconds < 0) {
+            throw new IllegalArgumentException("restoreDelaySeconds must be >= 0");
+        }
+        if (rule.maxPositionAttempts < 1) {
+            throw new IllegalArgumentException("maxPositionAttempts must be >= 1");
+        }
+        if (rule.replaceMode == null) {
+            throw new IllegalArgumentException("replaceMode cannot be empty");
+        }
+        if (rule.restoreMode == null) {
+            throw new IllegalArgumentException("restoreMode cannot be empty");
+        }
+        if (rule.activationMode == null) {
+            throw new IllegalArgumentException("activationMode cannot be empty");
+        }
+        HashSet<String> targetSet = new HashSet<>();
+        if (rule.targetBlocks != null) {
+            for (String tb : rule.targetBlocks) {
+                if (tb == null || tb.isBlank()) {
+                    throw new IllegalArgumentException("targetBlocks entry cannot be empty");
+                }
+                if (!targetSet.add(tb.toLowerCase())) {
+                    throw new IllegalArgumentException("Duplicate targetBlock: " + tb);
+                }
+            }
+        }
     }
 
     private static void normalizeBoundaryFields(MobRule rule, boolean uniqueDefaults) {

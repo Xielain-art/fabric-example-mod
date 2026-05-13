@@ -3,6 +3,7 @@ package com.gerbarium.regions.client.screen;
 import com.gerbarium.regions.client.data.ClientGerbariumData;
 import com.gerbarium.regions.client.network.GerbariumClientNetworking;
 import com.gerbarium.regions.model.MobRule;
+import com.gerbarium.regions.model.ResourceRule;
 import com.gerbarium.regions.model.Zone;
 import com.gerbarium.regions.model.ZoneDefaults;
 import net.minecraft.client.gui.DrawContext;
@@ -54,6 +55,8 @@ public class ZoneDetailsScreen extends Screen {
             addDrawableChild(ButtonWidget.builder(Text.literal("Runtime"), b -> client.setScreen(new ZoneRuntimeSettingsScreen(zoneId)))
                     .dimensions(startX + 234, actionY, 86, 20).build());
             addDrawableChild(ButtonWidget.builder(Text.literal("Add Rule"), b -> client.setScreen(new MobRuleEditScreen(zoneId, null)))
+                    .dimensions(startX + panelWidth - 188, actionY, 86, 20).build());
+            addDrawableChild(ButtonWidget.builder(Text.literal("Resources"), b -> client.setScreen(new ZoneResourcesScreen(zoneId)))
                     .dimensions(startX + panelWidth - 98, actionY, 86, 20).build());
         } else {
             addDrawableChild(ButtonWidget.builder(Text.literal(z.enabled ? "Disable" : "Enable"), b -> GerbariumClientNetworking.toggleZone(zoneId))
@@ -66,6 +69,8 @@ public class ZoneDetailsScreen extends Screen {
                     .dimensions(startX, actionY + 24, 136, 20).build());
             addDrawableChild(ButtonWidget.builder(Text.literal("Add Rule"), b -> client.setScreen(new MobRuleEditScreen(zoneId, null)))
                     .dimensions(startX + 140, actionY + 24, 136, 20).build());
+            addDrawableChild(ButtonWidget.builder(Text.literal("Resources"), b -> client.setScreen(new ZoneResourcesScreen(zoneId)))
+                    .dimensions(startX + 280, actionY + 24, 136, 20).build());
         }
 
         int total = z.mobs == null ? 0 : z.mobs.size();
@@ -132,6 +137,8 @@ public class ZoneDetailsScreen extends Screen {
         context.drawTextWithShadow(textRenderer, "Max: " + z.max.x + " " + z.max.y + " " + z.max.z, startX + panelWidth / 2, 84, 0xAAAAAA);
 
         context.drawTextWithShadow(textRenderer, "Mob Rules", startX + 12, 112, 0xA5FFB5);
+        int resourceCount = z.resources == null ? 0 : z.resources.size();
+        context.drawTextWithShadow(textRenderer, "Resources: " + resourceCount, startX + panelWidth / 2, 112, 0xA5FFB5);
 
         int listY = 148;
         int rowH = 52;

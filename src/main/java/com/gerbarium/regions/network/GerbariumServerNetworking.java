@@ -2,6 +2,7 @@ package com.gerbarium.regions.network;
 
 import com.gerbarium.regions.command.CommandFeedback;
 import com.gerbarium.regions.model.MobRule;
+import com.gerbarium.regions.model.ResourceRule;
 import com.gerbarium.regions.model.Zone;
 import com.gerbarium.regions.model.ZoneDefaults;
 import com.google.gson.Gson;
@@ -39,6 +40,9 @@ public final class GerbariumServerNetworking {
         registerAddMobRule();
         registerRemoveMobRule();
         registerUpdateZoneSettings();
+        registerAddResourceRule();
+        registerUpdateResourceRule();
+        registerRemoveResourceRule();
         registerToggleZone();
         registerSelectZone();
         registerDeselectZone();
@@ -399,6 +403,141 @@ public final class GerbariumServerNetworking {
                 player.teleport(world, x, y, z, player.getYaw(), player.getPitch());
 
                 CommandFeedback.send(player.getCommandSource(), "Teleported to zone: " + zone.id);
+            });
+        });
+    }
+
+    private static void registerAddResourceRule() {
+        ServerPlayNetworking.registerGlobalReceiver(GerbariumPackets.ADD_RESOURCE_RULE, (server, player, handler, buf, responseSender) -> {
+            String zoneId = buf.readString(256);
+            String ruleJson = buf.readString(MAX_STRING_LENGTH);
+
+            server.execute(() -> {
+                if (!hasAccess(player)) {
+                    return;
+                }
+
+                ResourceRule incoming = GSON.fromJson(ruleJson, ResourceRule.class);
+                if (incoming == null) {
+                    CommandFeedback.error(player.getCommandSource(), "Invalid resource rule payload.");
+                    return;
+                }
+
+                try {
+                    ZoneDefaults.normalizeResourceRule(incoming);
+                    ZoneDefaults.validateResourceRule(incoming);
+                } catch (IllegalArgumentException e) {
+                    CommandFeedback.error(player.getCommandSource(), e.getMessage());
+                    return;
+                }
+
+                STORAGE.reload();
+                Optional<Zone> optionalZone = STORAGE.findZone(zoneId);
+                if (optionalZone.isEmpty()) {
+                    CommandFeedback.error(player.getCommandSource(), "Zone not found: " + zoneId);
+                    sendZones(player);
+                    return;
+                }
+
+                Zone zone = optionalZone.get();
+                zone.resources.removeIf(r -> r.id != null && r.id.equalsIgnoreCase(incoming.id));
+                zone.resources.add(incoming);
+
+                try {
+                    STORAGE.addZone(zone);
+                    CommandFeedback.send(player.getCommandSource(), "Added resource rule: " + incoming.id);
+                } catch (Exception e) {
+                    CommandFeedback.error(player.getCommandSource(), "Failed to save: " + e.getMessage());
+                }
+
+                sendZones(player);
+            });
+        });
+    }
+
+    private static void registerUpdateResourceRule() {
+        ServerPlayNetworking.registerGlobalReceiver(GerbariumPackets.UPDATE_RESOURCE_RULE, (server, player, handler, buf, responseSender) -> {
+            String zoneId = buf.readString(256);
+            String ruleJson = buf.readString(MAX_STRING_LENGTH);
+
+            server.execute(() -> {
+                if (!hasAccess(player)) {
+                    return;
+                }
+
+                ResourceRule incoming = GSON.fromJson(ruleJson, ResourceRule.class);
+                if (incoming == null) {
+                    CommandFeedback.error(player.getCommandSource(), "Invalid resource rule payload.");
+                    return;
+                }
+
+                try {
+                    ZoneDefaults.normalizeResourceRule(incoming);
+                    ZoneDefaults.validateResourceRule(incoming);
+                } catch (IllegalArgumentException e) {
+                    CommandFeedback.error(player.getCommandSource(), e.getMessage());
+                    return;
+                }
+
+                STORAGE.reload();
+                Optional<Zone> optionalZone = STORAGE.findZone(zoneId);
+                if (optionalZone.isEmpty()) {
+                    CommandFeedback.error(player.getCommandSource(), "Zone not found: " + zoneId);
+                    sendZones(player);
+                    return;
+                }
+
+                Zone zone = optionalZone.get();
+                zone.resources.removeIf(r -> r.id != null && r.id.equalsIgnoreCase(incoming.id));
+                zone.resources.add(incoming);
+
+                try {
+                    STORAGE.addZone(zone);
+                    CommandFeedback.send(player.getCommandSource(), "Updated resource rule: " + incoming.id);
+                } catch (Exception e) {
+                    CommandFeedback.error(player.getCommandSource(), "Failed to save: " + e.getMessage());
+                }
+
+                sendZones(player);
+            });
+        });
+    }
+
+    private static void registerRemoveResourceRule() {
+        ServerPlayNetworking.registerGlobalReceiver(GerbariumPackets.REMOVE_RESOURCE_RULE, (server, player, handler, buf, responseSender) -> {
+            String zoneId = buf.readString(256);
+            String ruleId = buf.readString(256);
+
+            server.execute(() -> {
+                if (!hasAccess(player)) {
+                    return;
+                }
+
+                STORAGE.reload();
+                Optional<Zone> optionalZone = STORAGE.findZone(zoneId);
+                if (optionalZone.isEmpty()) {
+                    CommandFeedback.error(player.getCommandSource(), "Zone not found: " + zoneId);
+                    sendZones(player);
+                    return;
+                }
+
+                Zone zone = optionalZone.get();
+                boolean removed = zone.resources.removeIf(r -> ruleId.equalsIgnoreCase(r.id));
+
+                if (!removed) {
+                    CommandFeedback.error(player.getCommandSource(), "Resource rule not found: " + ruleId);
+                    sendZones(player);
+                    return;
+                }
+
+                try {
+                    STORAGE.addZone(zone);
+                    CommandFeedback.send(player.getCommandSource(), "Removed resource rule: " + ruleId);
+                } catch (Exception e) {
+                    CommandFeedback.error(player.getCommandSource(), "Failed to save: " + e.getMessage());
+                }
+
+                sendZones(player);
             });
         });
     }

@@ -31,6 +31,7 @@ public class WorldEditSelectionReader {
 
         return new Zone(
                 zoneId,
+                null,
                 true,
                 dimension,
                 new Vec3iJson(min.getBlockX(), min.getBlockY(), min.getBlockZ()),

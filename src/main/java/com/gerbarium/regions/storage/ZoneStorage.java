@@ -1,13 +1,14 @@
 package com.gerbarium.regions.storage;
 
 import com.gerbarium.regions.GerbariumRegionsBridge;
+import com.gerbarium.regions.model.MobRulesFile;
+import com.gerbarium.regions.model.ResourceRulesFile;
 import com.gerbarium.regions.model.Zone;
+import com.gerbarium.regions.model.ZoneBaseConfig;
 import com.gerbarium.regions.model.ZoneDefaults;
 import com.gerbarium.regions.model.ZonesFile;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -32,15 +33,11 @@ public class ZoneStorage {
     private final Path configDir;
     private final Path zonesDir;
 
-    // Старый файл. Только для миграции, больше как основной storage не используется.
-    private final Path legacyRegionsPath;
-
     private ZonesFile data;
 
     private ZoneStorage() {
         this.configDir = FabricLoader.getInstance().getConfigDir().resolve("gerbarium");
         this.zonesDir = configDir.resolve("zones");
-        this.legacyRegionsPath = configDir.resolve("regions.json");
 
         this.data = load();
 
@@ -52,7 +49,6 @@ public class ZoneStorage {
     }
 
     public synchronized String toJson() {
-        // Клиенту всё ещё отдаём общий JSON, но собираем его из отдельных файлов зон.
         return GSON.toJson(data);
     }
 
@@ -127,59 +123,47 @@ public class ZoneStorage {
         }
 
         Zone zone = optionalZone.get();
-        Path path = zonePath(zone.id);
+        Path zoneDir = zonePath(zone.id);
 
         boolean removedFromMemory = data.zones.removeIf(existing -> existing.id != null && existing.id.equalsIgnoreCase(id));
 
-        boolean deletedFile = false;
+        boolean deletedFolder = false;
 
         try {
-            deletedFile = Files.deleteIfExists(path);
+            if (Files.exists(zoneDir)) {
+                try (DirectoryStream<Path> stream = Files.newDirectoryStream(zoneDir)) {
+                    for (Path file : stream) {
+                        Files.deleteIfExists(file);
+                    }
+                }
+                Files.deleteIfExists(zoneDir);
+                deletedFolder = true;
+            }
         } catch (IOException e) {
-            GerbariumRegionsBridge.LOGGER.error("[Gerbarium] Failed to delete zone file {}", path.toAbsolutePath(), e);
-            throw new RuntimeException("Failed to delete zone file: " + path.toAbsolutePath(), e);
+            GerbariumRegionsBridge.LOGGER.error("[Gerbarium] Failed to delete zone folder {}", zoneDir.toAbsolutePath(), e);
+            throw new RuntimeException("Failed to delete zone folder: " + zoneDir.toAbsolutePath(), e);
         }
 
-        GerbariumRegionsBridge.LOGGER.info(
-                "[Gerbarium] Delete zone request: id={}, removedFromMemory={}, deletedFile={}, path={}",
-                id,
-                removedFromMemory,
-                deletedFile,
-                path.toAbsolutePath()
-        );
+        if (removedFromMemory) {
+            sortZones();
+        }
 
-        reload();
-
-        return removedFromMemory || deletedFile;
+        GerbariumRegionsBridge.LOGGER.info("[Gerbarium] Delete zone request: id={}, removedFromMemory={}, deletedFolder={}", id, removedFromMemory, deletedFolder);
+        return removedFromMemory;
     }
 
     private ZonesFile load() {
         try {
-            Files.createDirectories(configDir);
             Files.createDirectories(zonesDir);
 
-            ZonesFile loaded = loadFromZoneFiles();
+            ZonesFile loaded = loadFromZoneFolders();
 
-            // Если новая папка zones пустая, пробуем мигрировать старый config/gerbarium/regions.json.
-            if (loaded.zones.isEmpty() && Files.exists(legacyRegionsPath)) {
-                ZonesFile legacy = loadLegacyRegionsJson();
-
-                if (!legacy.zones.isEmpty()) {
-                    GerbariumRegionsBridge.LOGGER.info(
-                            "[Gerbarium] Migrating {} zone(s) from legacy regions.json to zones/*.json",
-                            legacy.zones.size()
-                    );
-
-                    for (Zone zone : legacy.zones) {
-                        ZoneDefaults.normalizeZone(zone);
-                        saveZone(zone);
-                    }
-
-                    loaded = loadFromZoneFiles();
-                }
+            if (loaded.zones == null) {
+                loaded.zones = new ArrayList<>();
             }
 
             sortZones(loaded);
+
             return loaded;
         } catch (IOException e) {
             GerbariumRegionsBridge.LOGGER.error("[Gerbarium] Failed to load zones from {}", zonesDir.toAbsolutePath(), e);
@@ -194,43 +178,81 @@ public class ZoneStorage {
         }
     }
 
-    private ZonesFile loadFromZoneFiles() throws IOException {
+    private ZonesFile loadFromZoneFolders() throws IOException {
         ZonesFile result = new ZonesFile();
-
         if (result.zones == null) {
             result.zones = new ArrayList<>();
         }
 
+        // Log and skip flat .json files
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(zonesDir, "*.json")) {
             for (Path path : stream) {
-                try (Reader reader = Files.newBufferedReader(path)) {
-                    JsonElement element = JsonParser.parseReader(reader);
+                GerbariumRegionsBridge.LOGGER.warn("[Gerbarium] Ignoring legacy flat zone file: {}. Modular folder format is required.", path.getFileName());
+            }
+        }
 
-                    if (element == null || !element.isJsonObject()) {
-                        GerbariumRegionsBridge.LOGGER.warn("[Gerbarium] Skipped invalid zone file: {}", path.toAbsolutePath());
+        // Scan subdirectories
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(zonesDir)) {
+            for (Path path : stream) {
+                if (!Files.isDirectory(path)) continue;
+
+                String folderName = path.getFileName().toString();
+                Path zoneJsonPath = path.resolve("zone.json");
+
+                if (!Files.exists(zoneJsonPath)) {
+                    GerbariumRegionsBridge.LOGGER.warn("[Gerbarium] Skipping folder {} - no zone.json found", folderName);
+                    continue;
+                }
+
+                try {
+                    // Load zone.json
+                    ZoneBaseConfig base;
+                    try (Reader reader = Files.newBufferedReader(zoneJsonPath)) {
+                        base = GSON.fromJson(JsonParser.parseReader(reader), ZoneBaseConfig.class);
+                    }
+
+                    if (base == null || base.id == null || base.id.isBlank()) {
+                        GerbariumRegionsBridge.LOGGER.warn("[Gerbarium] Skipping {} - invalid zone.json", folderName);
                         continue;
                     }
 
-                    JsonObject json = element.getAsJsonObject();
-                    RuleJsonMigration.migrateZone(json);
-                    Zone zone = GSON.fromJson(json, Zone.class);
-
-                    if (zone == null) {
-                        GerbariumRegionsBridge.LOGGER.warn("[Gerbarium] Skipped empty zone file: {}", path.toAbsolutePath());
+                    if (!base.id.equals(folderName)) {
+                        GerbariumRegionsBridge.LOGGER.error("[Gerbarium] Zone id '{}' in zone.json does not match folder name '{}'. Skipping.", base.id, folderName);
                         continue;
                     }
 
-                    if (zone.id == null || zone.id.isBlank()) {
-                        String fileName = path.getFileName().toString();
-                        zone.id = fileName.endsWith(".json")
-                                ? fileName.substring(0, fileName.length() - ".json".length())
-                                : fileName;
+                    // Load mobs.json (optional)
+                    MobRulesFile mobs = null;
+                    Path mobsPath = path.resolve("mobs.json");
+                    if (Files.exists(mobsPath)) {
+                        try (Reader reader = Files.newBufferedReader(mobsPath)) {
+                            mobs = GSON.fromJson(JsonParser.parseReader(reader), MobRulesFile.class);
+                        }
+                        if (mobs != null && mobs.zoneId != null && !mobs.zoneId.equals(base.id)) {
+                            GerbariumRegionsBridge.LOGGER.error("[Gerbarium] mobs.json zoneId '{}' does not match zone '{}'. Skipping mobs.", mobs.zoneId, base.id);
+                            mobs = null;
+                        }
                     }
 
+                    // Load resources.json (optional)
+                    ResourceRulesFile resources = null;
+                    Path resourcesPath = path.resolve("resources.json");
+                    if (Files.exists(resourcesPath)) {
+                        try (Reader reader = Files.newBufferedReader(resourcesPath)) {
+                            resources = GSON.fromJson(JsonParser.parseReader(reader), ResourceRulesFile.class);
+                        }
+                        if (resources != null && resources.zoneId != null && !resources.zoneId.equals(base.id)) {
+                            GerbariumRegionsBridge.LOGGER.error("[Gerbarium] resources.json zoneId '{}' does not match zone '{}'. Skipping resources.", resources.zoneId, base.id);
+                            resources = null;
+                        }
+                    }
+
+                    Zone zone = zoneFromFiles(base, mobs, resources);
                     ZoneDefaults.normalizeZone(zone);
                     result.zones.add(zone);
+
                 } catch (Exception e) {
-                    GerbariumRegionsBridge.LOGGER.error("[Gerbarium] Failed to load zone file: {}", path.toAbsolutePath(), e);
+                    GerbariumRegionsBridge.LOGGER.error("[Gerbarium] Failed to load zone folder: {}", path.toAbsolutePath(), e);
                 }
             }
         }
@@ -238,61 +260,84 @@ public class ZoneStorage {
         return result;
     }
 
-    private ZonesFile loadLegacyRegionsJson() {
-        try (Reader reader = Files.newBufferedReader(legacyRegionsPath)) {
-            JsonElement element = JsonParser.parseReader(reader);
-
-            if (element == null || !element.isJsonObject()) {
-                return emptyZonesFile();
-            }
-
-            JsonObject json = element.getAsJsonObject();
-            RuleJsonMigration.migrateZonesFile(json);
-            ZonesFile loaded = GSON.fromJson(json, ZonesFile.class);
-
-            if (loaded == null) {
-                return emptyZonesFile();
-            }
-
-            if (loaded.zones == null) {
-                loaded.zones = new ArrayList<>();
-            }
-
-            for (Zone zone : loaded.zones) {
-                ZoneDefaults.normalizeZone(zone);
-            }
-
-            return loaded;
-        } catch (Exception e) {
-            GerbariumRegionsBridge.LOGGER.error("[Gerbarium] Failed to load legacy regions.json: {}", legacyRegionsPath.toAbsolutePath(), e);
-            return emptyZonesFile();
+    private Zone zoneFromFiles(ZoneBaseConfig base, MobRulesFile mobs, ResourceRulesFile resources) {
+        Zone zone = new Zone();
+        
+        zone.name = base.name;
+        zone.enabled = base.enabled;
+        zone.dimension = base.dimension;
+        zone.min = base.min;
+        zone.max = base.max;
+        zone.activation = base.activation;
+        zone.version = base.version;
+        if (mobs != null) {
+            zone.spawn = mobs.spawn;
+            zone.mobs = mobs.rules;
         }
+        if (resources != null) {
+            zone.resources = resources.rules;
+        }
+        return zone;
+    }
+
+    private ZoneBaseConfig zoneToBaseConfig(Zone zone) {
+        ZoneBaseConfig base = new ZoneBaseConfig();
+        base.version = zone.version;
+        base.id = zone.id;
+        base.name = zone.name != null ? zone.name : zone.id;
+        base.enabled = zone.enabled;
+        base.dimension = zone.dimension;
+        base.min = zone.min;
+        base.max = zone.max;
+        base.activation = zone.activation;
+        return base;
+    }
+
+    private MobRulesFile zoneToMobsFile(Zone zone) {
+        MobRulesFile mobs = new MobRulesFile();
+        mobs.version = zone.version;
+        mobs.zoneId = zone.id;
+        mobs.spawn = zone.spawn;
+        mobs.rules = zone.mobs;
+        return mobs;
+    }
+
+    private ResourceRulesFile zoneToResourcesFile(Zone zone) {
+        ResourceRulesFile resources = new ResourceRulesFile();
+        resources.version = zone.version;
+        resources.zoneId = zone.id;
+        resources.rules = zone.resources;
+        return resources;
     }
 
     private void saveZone(Zone zone) throws IOException {
         ZoneDefaults.normalizeZone(zone);
         ZoneDefaults.validateZone(zone);
 
-        Path path = zonePath(zone.id);
-        Path expected = zonePath(zone.id);
+        Path zoneDir = zonesDir.resolve(zone.id);
+        Files.createDirectories(zoneDir);
 
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(zonesDir, "*.json")) {
-            for (Path existing : stream) {
-                String fileName = existing.getFileName().toString();
-                String base = fileName.endsWith(".json") ? fileName.substring(0, fileName.length() - 5) : fileName;
-                if (base.equalsIgnoreCase(zone.id) && !existing.equals(expected)) {
-                    Files.deleteIfExists(existing);
-                }
-            }
+        // Write zone.json
+        ZoneBaseConfig base = zoneToBaseConfig(zone);
+        try (Writer writer = Files.newBufferedWriter(zoneDir.resolve("zone.json"))) {
+            GSON.toJson(base, writer);
         }
 
-        try (Writer writer = Files.newBufferedWriter(path)) {
-            GSON.toJson(zone, writer);
+        // Write mobs.json
+        MobRulesFile mobs = zoneToMobsFile(zone);
+        try (Writer writer = Files.newBufferedWriter(zoneDir.resolve("mobs.json"))) {
+            GSON.toJson(mobs, writer);
+        }
+
+        // Write resources.json
+        ResourceRulesFile resources = zoneToResourcesFile(zone);
+        try (Writer writer = Files.newBufferedWriter(zoneDir.resolve("resources.json"))) {
+            GSON.toJson(resources, writer);
         }
     }
 
     private Path zonePath(String zoneId) {
-        return zonesDir.resolve(safeFileName(zoneId) + ".json");
+        return zonesDir.resolve(safeFileName(zoneId));
     }
 
     private String safeFileName(String zoneId) {

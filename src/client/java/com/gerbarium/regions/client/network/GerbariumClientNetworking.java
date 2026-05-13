@@ -3,6 +3,7 @@ package com.gerbarium.regions.client.network;
 import com.gerbarium.regions.client.data.ClientGerbariumData;
 import com.gerbarium.regions.client.screen.RegionsScreen;
 import com.gerbarium.regions.model.MobRule;
+import com.gerbarium.regions.model.ResourceRule;
 import com.gerbarium.regions.network.GerbariumPackets;
 import com.google.gson.Gson;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -139,6 +140,27 @@ public final class GerbariumClientNetworking {
         buf.writeString(zoneId, 256);
 
         ClientPlayNetworking.send(GerbariumPackets.TP_TO_ZONE, buf);
+    }
+
+    public static void addResourceRule(String zoneId, ResourceRule rule) {
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeString(zoneId, 256);
+        buf.writeString(GSON.toJson(rule), MAX_STRING_LENGTH);
+        ClientPlayNetworking.send(GerbariumPackets.ADD_RESOURCE_RULE, buf);
+    }
+
+    public static void updateResourceRule(String zoneId, ResourceRule rule) {
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeString(zoneId, 256);
+        buf.writeString(GSON.toJson(rule), MAX_STRING_LENGTH);
+        ClientPlayNetworking.send(GerbariumPackets.UPDATE_RESOURCE_RULE, buf);
+    }
+
+    public static void removeResourceRule(String zoneId, String ruleId) {
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeString(zoneId, 256);
+        buf.writeString(ruleId, 256);
+        ClientPlayNetworking.send(GerbariumPackets.REMOVE_RESOURCE_RULE, buf);
     }
 
     public static void setPreferredZoneId(String zoneId) {

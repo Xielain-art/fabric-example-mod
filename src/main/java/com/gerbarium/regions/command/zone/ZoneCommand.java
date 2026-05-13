@@ -42,7 +42,7 @@ public final class ZoneCommand {
                             storage.reload();
                             CommandFeedback.send(
                                     context.getSource(),
-                                    "Gerbarium zones reloaded from config/gerbarium/zones/*.json."
+                                    "Gerbarium zones reloaded from config/gerbarium/zones/ (modular format)."
                             );
                             return 1;
                         })
@@ -55,6 +55,7 @@ public final class ZoneCommand {
                 .then(ZoneToggleCommand.buildEnable(storage))
                 .then(ZoneToggleCommand.buildDisable(storage))
                 .then(ZoneMobCommand.buildMobRoot(storage))
+                .then(ZoneResourceCommand.buildResourceRoot(storage))
                 .then(ZoneSettingsCommand.build(storage))
                 .then(ZoneClearCommand.build(storage))
 

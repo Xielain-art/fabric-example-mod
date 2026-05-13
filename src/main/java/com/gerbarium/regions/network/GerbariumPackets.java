@@ -15,6 +15,9 @@ public final class GerbariumPackets {
     public static final Identifier ADD_MOB_RULE = new Identifier(GerbariumRegionsBridge.MOD_ID, "add_mob_rule");
     public static final Identifier REMOVE_MOB_RULE = new Identifier(GerbariumRegionsBridge.MOD_ID, "remove_mob_rule");
     public static final Identifier UPDATE_ZONE_SETTINGS = new Identifier(GerbariumRegionsBridge.MOD_ID, "update_zone_settings");
+    public static final Identifier ADD_RESOURCE_RULE = new Identifier(GerbariumRegionsBridge.MOD_ID, "add_resource_rule");
+    public static final Identifier UPDATE_RESOURCE_RULE = new Identifier(GerbariumRegionsBridge.MOD_ID, "update_resource_rule");
+    public static final Identifier REMOVE_RESOURCE_RULE = new Identifier(GerbariumRegionsBridge.MOD_ID, "remove_resource_rule");
 
     public static final Identifier TOGGLE_ZONE = new Identifier(GerbariumRegionsBridge.MOD_ID, "toggle_zone");
     public static final Identifier SELECT_ZONE = new Identifier(GerbariumRegionsBridge.MOD_ID, "select_zone");
