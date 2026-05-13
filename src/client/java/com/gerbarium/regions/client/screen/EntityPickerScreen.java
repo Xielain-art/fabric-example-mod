@@ -30,15 +30,13 @@ public class EntityPickerScreen extends Screen {
     protected void init() {
         clearChildren();
 
-        // Основные параметры контейнера
-        int panelWidth = Math.min(480, width - 40);
-        int startX = (width - panelWidth) / 2;
-        int topY = 40; // Y позиция для строки поиска
+        int panelWidth = ScreenLayout.panelWidth(width, 560);
+        int startX = ScreenLayout.panelLeft(width, panelWidth);
+        int topY = 40;
 
-        // --- БЛОК 1: Строка поиска ---
         int gap = 4;
-        int refreshWidth = 80;
-        int searchButtonWidth = 60;
+        int refreshWidth = 84;
+        int searchButtonWidth = 66;
         int searchFieldWidth = panelWidth - refreshWidth - searchButtonWidth - gap * 2;
 
         searchField = new TextFieldWidget(textRenderer, startX, topY, searchFieldWidth, 20, Text.literal("Search"));
@@ -57,15 +55,13 @@ public class EntityPickerScreen extends Screen {
                 .dimensions(startX + searchFieldWidth + gap + searchButtonWidth + gap, topY, refreshWidth, 20)
                 .build());
 
-        // --- БЛОК 2: Фильтрация и Список сущностей ---
         List<String> ids = ClientGerbariumData.entityIds();
         String q = query.toLowerCase(Locale.ROOT);
         List<String> filtered = ids.stream().filter(id -> q.isBlank() || id.toLowerCase(Locale.ROOT).contains(q)).toList();
 
-        int listY = topY + 30; // Начало списка элементов
-        int bottomSpace = 75;  // Пространство внизу для пагинации и кнопки Back
-        int rowHeight = 24;    // Высота одной кнопки (20) + отступ (4)
-
+        int listY = topY + 34;
+        int bottomSpace = 82;
+        int rowHeight = 24;
         int maxRows = Math.max(1, (height - listY - bottomSpace) / rowHeight);
         pageSize = maxRows;
 
@@ -80,8 +76,9 @@ public class EntityPickerScreen extends Screen {
             }
             String id = filtered.get(idx);
             int rowY = listY + i * rowHeight;
+            String label = ScreenLayout.trim(textRenderer, id, panelWidth - 20);
 
-            addDrawableChild(ButtonWidget.builder(Text.literal(trimToWidth(id, panelWidth - 20)), button -> {
+            addDrawableChild(ButtonWidget.builder(Text.literal(label), button -> {
                         consumer.onEntitySelected(id);
                         client.setScreen(parent);
                     })
@@ -89,27 +86,22 @@ public class EntityPickerScreen extends Screen {
                     .build());
         }
 
-        // --- БЛОК 3: Пагинация (Центрирована под списком) ---
         if (filtered.size() > maxRows) {
             int pagY = listY + maxRows * rowHeight + 6;
             int pageBtnWidth = 80;
-            int pagStartX = width / 2 - (pageBtnWidth + 56) / 2; // 56 = две кнопки по 24 + отступы по 4
+            int pagStartX = width / 2 - (pageBtnWidth + 56) / 2;
 
             addDrawableChild(ButtonWidget.builder(Text.literal("<"), b -> { page = Math.max(0, page - 1); init(); })
                     .dimensions(pagStartX, pagY, 24, 20).build());
-
-            // Заглушка-кнопка для отображения номера страницы в едином стиле
             addDrawableChild(ButtonWidget.builder(Text.literal("Page " + (page + 1) + " / " + (maxPage + 1)), b -> {})
                     .dimensions(pagStartX + 28, pagY, pageBtnWidth, 20).build());
-
             addDrawableChild(ButtonWidget.builder(Text.literal(">"), b -> { page = Math.min(maxPage, page + 1); init(); })
                     .dimensions(pagStartX + 32 + pageBtnWidth, pagY, 24, 20).build());
         }
 
-        // --- БЛОК 4: Кнопка Back (Футер) ---
-        int backButtonWidth = 150;
+        int backWidth = Math.min(160, panelWidth);
         addDrawableChild(ButtonWidget.builder(Text.literal("Back"), button -> client.setScreen(parent))
-                .dimensions(width / 2 - backButtonWidth / 2, height - 32, backButtonWidth, 20)
+                .dimensions(width / 2 - backWidth / 2, height - 32, backWidth, 20)
                 .build());
     }
 
@@ -117,42 +109,16 @@ public class EntityPickerScreen extends Screen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
 
-        // Отрисовка подложки модального окна
-        int panelWidth = Math.min(480, width - 40);
-        int startX = (width - panelWidth) / 2;
-        int padding = 12;
+        int panelWidth = ScreenLayout.panelWidth(width, 560);
+        int startX = ScreenLayout.panelLeft(width, panelWidth);
+        ScreenLayout.drawPanel(context, startX, 15, panelWidth, height - 15);
+        context.drawCenteredTextWithShadow(textRenderer, title.getString(), width / 2, 23, 0xFFFFFF);
+        context.drawTextWithShadow(textRenderer, "Search entity ids", startX, 28, 0xA5FFB5);
 
-        int panelTop = 15;
-        int panelBottom = height - 15;
-
-        // Темный фон
-        context.fill(startX - padding, panelTop, startX + panelWidth + padding, panelBottom, 0x88000000);
-        // Декоративная акцентная линия сверху
-        context.fill(startX - padding, panelTop, startX + panelWidth + padding, panelTop + 2, 0xFF3ECF8E);
-
-        // Заголовок
-        context.drawCenteredTextWithShadow(textRenderer, this.title.getString(), width / 2, panelTop + 8, 0xFFFFFF);
-
-        // Сообщение о пустом списке
         if (ClientGerbariumData.entityIds().isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, "No entity IDs synced yet. Click Refresh.", width / 2, height / 2 - 10, 0xFFAAAA);
+            context.drawCenteredTextWithShadow(textRenderer, "No entity IDs synced yet. Click Refresh.", width / 2, height / 2 - 10, 0xFFAAAAAA);
         }
 
         super.render(context, mouseX, mouseY, delta);
-    }
-
-    private String trimToWidth(String text, int maxWidth) {
-        if (textRenderer.getWidth(text) <= maxWidth) {
-            return text;
-        }
-
-        String suffix = "...";
-        String result = text;
-
-        while (!result.isEmpty() && textRenderer.getWidth(result + suffix) > maxWidth) {
-            result = result.substring(0, result.length() - 1);
-        }
-
-        return result + suffix;
     }
 }

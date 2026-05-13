@@ -6,6 +6,8 @@ import java.util.regex.Pattern;
 
 public final class ZoneDefaults {
     private static final Pattern SAFE_ID = Pattern.compile("^[a-zA-Z0-9_-]+$");
+    private static final int DEFAULT_BOUNDARY_MAX_OUTSIDE_SECONDS = 10;
+    private static final int DEFAULT_BOUNDARY_CHECK_INTERVAL_TICKS = 40;
 
     private ZoneDefaults() {
     }
@@ -74,6 +76,7 @@ public final class ZoneDefaults {
             if (rule.failedSpawnRetrySeconds < 1) {
                 rule.failedSpawnRetrySeconds = 60;
             }
+            normalizeBoundaryFields(rule, true);
             return;
         }
 
@@ -100,6 +103,7 @@ public final class ZoneDefaults {
         if (rule.failedSpawnRetrySeconds < 1) {
             rule.failedSpawnRetrySeconds = 60;
         }
+        normalizeBoundaryFields(rule, false);
     }
 
     public static void validateZone(Zone zone) {
@@ -162,6 +166,15 @@ public final class ZoneDefaults {
         if (rule.failedSpawnRetrySeconds < 1) {
             throw new IllegalArgumentException("failedSpawnRetrySeconds must be >= 1");
         }
+        if (!isValidBoundaryMode(rule.boundaryMode)) {
+            throw new IllegalArgumentException("boundaryMode must be one of NONE, LEASH, TELEPORT_BACK, REMOVE_OUTSIDE");
+        }
+        if (rule.boundaryMaxOutsideSeconds < 0) {
+            throw new IllegalArgumentException("boundaryMaxOutsideSeconds must be >= 0");
+        }
+        if (rule.boundaryCheckIntervalTicks < 20) {
+            throw new IllegalArgumentException("boundaryCheckIntervalTicks must be >= 20");
+        }
         if (rule.companions == null) {
             rule.companions = new ArrayList<>();
         }
@@ -211,6 +224,31 @@ public final class ZoneDefaults {
         }
         if (rule.chance < 0.0 || rule.chance > 1.0) {
             throw new IllegalArgumentException("Companion chance must be 0..1");
+        }
+    }
+
+    public static boolean isValidBoundaryMode(String mode) {
+        return MobRule.BOUNDARY_NONE.equals(mode)
+                || MobRule.BOUNDARY_LEASH.equals(mode)
+                || MobRule.BOUNDARY_TELEPORT_BACK.equals(mode)
+                || MobRule.BOUNDARY_REMOVE_OUTSIDE.equals(mode);
+    }
+
+    public static String defaultBoundaryModeFor(SpawnType spawnType) {
+        return spawnType == SpawnType.UNIQUE ? MobRule.BOUNDARY_TELEPORT_BACK : MobRule.BOUNDARY_LEASH;
+    }
+
+    private static void normalizeBoundaryFields(MobRule rule, boolean uniqueDefaults) {
+        rule.boundaryModeWasInvalid = false;
+        if (!isValidBoundaryMode(rule.boundaryMode)) {
+            rule.boundaryModeWasInvalid = true;
+            rule.boundaryMode = defaultBoundaryModeFor(uniqueDefaults ? SpawnType.UNIQUE : rule.spawnType);
+        }
+        if (rule.boundaryMaxOutsideSeconds < 0) {
+            rule.boundaryMaxOutsideSeconds = DEFAULT_BOUNDARY_MAX_OUTSIDE_SECONDS;
+        }
+        if (rule.boundaryCheckIntervalTicks < 20) {
+            rule.boundaryCheckIntervalTicks = DEFAULT_BOUNDARY_CHECK_INTERVAL_TICKS;
         }
     }
 }

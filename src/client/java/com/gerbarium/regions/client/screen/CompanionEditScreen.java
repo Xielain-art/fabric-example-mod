@@ -38,54 +38,48 @@ public class CompanionEditScreen extends Screen implements EntitySelectionConsum
     protected void init() {
         clearChildren();
 
-        // Централизация и сетка
-        int formWidth = 340;
-        int startX = (width - formWidth) / 2;
+        int formWidth = ScreenLayout.panelWidth(width, 420);
+        int startX = ScreenLayout.panelLeft(width, formWidth);
         int yOffset = 45;
         int rowSpacing = 40;
 
-        // Строка 1: Имя и кнопка Advanced
-        idField = field(startX, yOffset, 244, draft.name == null ? "" : draft.name);
+        idField = field(startX, yOffset, Math.max(120, formWidth - 100), draft.name == null ? "" : draft.name);
         addDrawableChild(idField);
         addDrawableChild(ButtonWidget.builder(Text.literal(advancedView ? "Advanced: On" : "Advanced: Off"), b -> {
             advancedView = !advancedView;
             init();
-        }).dimensions(startX + 248, yOffset, 92, 20).build());
+        }).dimensions(startX + Math.max(124, formWidth - 96), yOffset, 92, 20).build());
 
-        // Строка 2: Сущность и кнопка Pick Entity
         yOffset += rowSpacing;
-        entityField = field(startX, yOffset, 244, draft.entity);
+        entityField = field(startX, yOffset, Math.max(120, formWidth - 100), draft.entity);
         addDrawableChild(entityField);
         addDrawableChild(ButtonWidget.builder(Text.literal("Pick Entity"), b -> {
             capture();
             client.setScreen(new EntityPickerScreen(this, this, draft.entity));
-        }).dimensions(startX + 248, yOffset, 92, 20).build());
+        }).dimensions(startX + Math.max(124, formWidth - 96), yOffset, 92, 20).build());
 
-        // Строка 3: Параметры (Count, Radius, Chance) - разделены на 3 равные колонки
         yOffset += rowSpacing;
-        int col1 = 110;
-        int col2 = 110;
-        int col3 = 112; // 110 + 110 + 112 + 8 (отступы) = 340
+        int col1 = Math.max(80, (formWidth - 8) / 3);
+        int col2 = Math.max(80, (formWidth - 8) / 3);
+        int col3 = Math.max(80, formWidth - col1 - col2 - 8);
 
         countField = field(startX, yOffset, col1, String.valueOf(draft.count));
         radiusField = field(startX + col1 + 4, yOffset, col2, String.valueOf(draft.radius));
         chanceField = field(startX + col1 + col2 + 8, yOffset, col3, String.valueOf(draft.chance));
-
         addDrawableChild(countField);
         addDrawableChild(radiusField);
         addDrawableChild(chanceField);
 
-        // Футер: Кнопки сохранения и отмены
         int footerY = height - 35;
         addDrawableChild(ButtonWidget.builder(Text.literal("Save"), b -> save())
-                .dimensions(startX, footerY, 168, 20).build());
+                .dimensions(startX, footerY, formWidth / 2 - 4, 20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("Cancel"), b -> client.setScreen(parent))
-                .dimensions(startX + 172, footerY, 168, 20).build());
+                .dimensions(startX + formWidth / 2 + 4, footerY, formWidth / 2 - 4, 20).build());
     }
 
     private TextFieldWidget field(int x, int y, int w, String value) {
         TextFieldWidget field = new TextFieldWidget(textRenderer, x, y, w, 20, Text.literal(""));
-        field.setText(value);
+        field.setText(value == null ? "" : value);
         return field;
     }
 
@@ -97,8 +91,8 @@ public class CompanionEditScreen extends Screen implements EntitySelectionConsum
         draft.chance = parseDouble(chanceField, draft.chance);
     }
 
-    private int parseInt(TextFieldWidget f, int d) { try { return Integer.parseInt(f.getText().trim()); } catch (Exception e){ return d; } }
-    private double parseDouble(TextFieldWidget f, double d){ try { return Double.parseDouble(f.getText().trim()); } catch (Exception e){ return d; } }
+    private int parseInt(TextFieldWidget f, int d) { try { return Integer.parseInt(f.getText().trim()); } catch (Exception e) { return d; } }
+    private double parseDouble(TextFieldWidget f, double d) { try { return Double.parseDouble(f.getText().trim()); } catch (Exception e) { return d; } }
 
     private void save() {
         capture();
@@ -128,35 +122,24 @@ public class CompanionEditScreen extends Screen implements EntitySelectionConsum
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
 
-        int formWidth = 340;
-        int startX = (width - formWidth) / 2;
-        int yOffset = 45;
-        int rowSpacing = 40;
-
-        // Заголовок
+        int formWidth = ScreenLayout.panelWidth(width, 420);
+        int startX = ScreenLayout.panelLeft(width, formWidth);
+        ScreenLayout.drawPanel(context, startX, 15, formWidth, height - 15);
         context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 15, 0xFFFFFF);
 
-        // Подписи 1 строки
+        int yOffset = 45;
         context.drawTextWithShadow(textRenderer, "Companion Name", startX, yOffset - 11, 0xA5FFB5);
-
-        // Подписи 2 строки
-        yOffset += rowSpacing;
+        yOffset += 40;
         context.drawTextWithShadow(textRenderer, "Entity", startX, yOffset - 11, 0xA5FFB5);
-
-        // Подписи 3 строки
-        yOffset += rowSpacing;
-        int col1 = 110;
-        int col2 = 110;
+        yOffset += 40;
         context.drawTextWithShadow(textRenderer, "Count", startX, yOffset - 11, 0xA5FFB5);
-        context.drawTextWithShadow(textRenderer, "Radius", startX + col1 + 4, yOffset - 11, 0xA5FFB5);
-        context.drawTextWithShadow(textRenderer, "Chance", startX + col1 + col2 + 8, yOffset - 11, 0xA5FFB5);
+        context.drawTextWithShadow(textRenderer, "Radius", startX + Math.max(80, (formWidth - 8) / 3) + 4, yOffset - 11, 0xA5FFB5);
+        context.drawTextWithShadow(textRenderer, "Chance", startX + (Math.max(80, (formWidth - 8) / 3) * 2) + 8, yOffset - 11, 0xA5FFB5);
 
-        // Блок Advanced
         if (advancedView) {
             context.drawTextWithShadow(textRenderer, "ID: " + (draft.id == null ? "" : draft.id), startX, yOffset + 30, 0x888888);
         }
 
-        // Блок с ошибкой (центрируется над кнопками)
         if (!error.isBlank()) {
             context.drawCenteredTextWithShadow(textRenderer, error, width / 2, height - 55, 0xFF5555);
         }

@@ -46,12 +46,17 @@ public final class ZoneInfoCommand {
                                 CommandFeedback.send(context.getSource(), "No mob rules configured.");
                             } else {
                                 for (MobRule mob : zone.mobs) {
-                                    CommandFeedback.send(context.getSource(), "- [" + mob.spawnType + "] " + mob.entity + " max=" + mob.maxAlive + " count=" + mob.spawnCount + " cooldown=" + mob.respawnSeconds + "s chance=" + mob.chance);
+                                    CommandFeedback.send(context.getSource(), "- [" + mob.spawnType + "] " + mob.entity + " max=" + mob.maxAlive + " count=" + mob.spawnCount + " cooldown=" + mob.respawnSeconds + "s chance=" + mob.chance + " boundary=" + boundarySummary(mob));
                                 }
                             }
 
                             return 1;
                         })
                 );
+    }
+
+    private static String boundarySummary(MobRule mob) {
+        String mode = mob.boundaryMode == null || mob.boundaryMode.isBlank() ? MobRule.BOUNDARY_LEASH : mob.boundaryMode;
+        return mob.boundaryMaxOutsideSeconds > 0 ? mode + ", " + mob.boundaryMaxOutsideSeconds + "s" : mode;
     }
 }

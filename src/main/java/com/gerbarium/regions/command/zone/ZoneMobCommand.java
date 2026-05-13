@@ -27,6 +27,7 @@ public final class ZoneMobCommand {
         return literal("mob")
                 .then(buildAddPack(storage))
                 .then(buildAddUnique(storage))
+                .then(buildBoundary(storage))
                 .then(buildRemove(storage))
                 .then(buildList(storage))
                 .then(buildInfo(storage))
@@ -75,6 +76,59 @@ public final class ZoneMobCommand {
                                                             return upsertRule(ctx.getSource(), storage, zoneId, rule);
                                                         })
                                                 )))));
+    }
+
+    private static LiteralArgumentBuilder<ServerCommandSource> buildBoundary(ZoneStorage storage) {
+        return literal("boundary")
+                .then(argument("zone", StringArgumentType.word())
+                        .then(argument("ruleId", StringArgumentType.word())
+                                .then(argument("mode", StringArgumentType.word())
+                                        .then(argument("maxOutsideSeconds", IntegerArgumentType.integer(0))
+                                                .then(argument("checkIntervalTicks", IntegerArgumentType.integer(20))
+                                                        .then(argument("teleportBack", BoolArgumentType.bool())
+                                                                .executes(ctx -> {
+                                                                    String zoneId = StringArgumentType.getString(ctx, "zone");
+                                                                    String ruleId = StringArgumentType.getString(ctx, "ruleId");
+                                                                    String mode = StringArgumentType.getString(ctx, "mode").toUpperCase();
+                                                                    int maxOutsideSeconds = IntegerArgumentType.getInteger(ctx, "maxOutsideSeconds");
+                                                                    int checkIntervalTicks = IntegerArgumentType.getInteger(ctx, "checkIntervalTicks");
+                                                                    boolean teleportBack = BoolArgumentType.getBool(ctx, "teleportBack");
+
+                                                                    if (!ZoneDefaults.isValidBoundaryMode(mode)) {
+                                                                        CommandFeedback.error(ctx.getSource(), "Unknown boundary mode: " + mode);
+                                                                        return 0;
+                                                                    }
+
+                                                                    Optional<Zone> oz = storage.findZone(zoneId);
+                                                                    if (oz.isEmpty()) {
+                                                                        CommandFeedback.error(ctx.getSource(), "Zone not found.");
+                                                                        return 0;
+                                                                    }
+
+                                                                    Optional<MobRule> r = findRule(oz.get(), ruleId);
+                                                                    if (r.isEmpty()) {
+                                                                        CommandFeedback.error(ctx.getSource(), "Mob rule not found: " + ruleId);
+                                                                        return 0;
+                                                                    }
+
+                                                                    MobRule rule = r.get();
+                                                                    rule.boundaryMode = mode;
+                                                                    rule.boundaryMaxOutsideSeconds = maxOutsideSeconds;
+                                                                    rule.boundaryCheckIntervalTicks = checkIntervalTicks;
+                                                                    rule.boundaryTeleportBack = teleportBack;
+
+                                                                    try {
+                                                                        ZoneDefaults.validateMobRule(rule);
+                                                                        ZoneDefaults.normalizeMobRule(rule);
+                                                                    } catch (IllegalArgumentException ex) {
+                                                                        CommandFeedback.error(ctx.getSource(), ex.getMessage());
+                                                                        return 0;
+                                                                    }
+
+                                                                    storage.addZone(oz.get());
+                                                                    CommandFeedback.send(ctx.getSource(), "Updated boundary settings for rule '" + ruleId + "'.");
+                                                                    return 1;
+                                                                })))))));
     }
 
     private static LiteralArgumentBuilder<ServerCommandSource> buildRemove(ZoneStorage storage) {
@@ -129,7 +183,7 @@ public final class ZoneMobCommand {
                 return 0;
             }
             for (MobRule r : oz.get().mobs) {
-                CommandFeedback.send(ctx.getSource(), "- " + r.spawnType + " " + displayName(r) + " -> " + r.entity + " respawn=" + r.respawnSeconds + "s chance=" + r.chance);
+                CommandFeedback.send(ctx.getSource(), "- " + r.spawnType + " " + displayName(r) + " -> " + r.entity + " respawn=" + r.respawnSeconds + "s chance=" + r.chance + " boundary=" + boundarySummary(r));
             }
             return 1;
         }));
@@ -153,6 +207,7 @@ public final class ZoneMobCommand {
             CommandFeedback.send(ctx.getSource(), "Entity: " + m.entity + ", enabled=" + Boolean.TRUE.equals(m.enabled));
             CommandFeedback.send(ctx.getSource(), "refill=" + m.refillMode + ", maxAlive=" + m.maxAlive + ", spawnCount=" + m.spawnCount);
             CommandFeedback.send(ctx.getSource(), "respawn=" + m.respawnSeconds + "s, chance=" + m.chance + ", retry=" + m.failedSpawnRetrySeconds + "s");
+            CommandFeedback.send(ctx.getSource(), "boundary=" + boundarySummary(m) + ", checkInterval=" + m.boundaryCheckIntervalTicks + "t, teleportBack=" + m.boundaryTeleportBack);
             return 1;
         })));
     }
@@ -302,5 +357,10 @@ public final class ZoneMobCommand {
 
     private static String displayName(CompanionRule rule) {
         return rule.name == null || rule.name.isBlank() ? rule.id : rule.name;
+    }
+
+    private static String boundarySummary(MobRule rule) {
+        String mode = rule.boundaryMode == null || rule.boundaryMode.isBlank() ? MobRule.BOUNDARY_LEASH : rule.boundaryMode;
+        return rule.boundaryMaxOutsideSeconds > 0 ? mode + ", " + rule.boundaryMaxOutsideSeconds + "s" : mode;
     }
 }

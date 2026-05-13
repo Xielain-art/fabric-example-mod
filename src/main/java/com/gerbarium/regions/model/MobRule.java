@@ -5,6 +5,11 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class MobRule {
+    public static final String BOUNDARY_NONE = "NONE";
+    public static final String BOUNDARY_LEASH = "LEASH";
+    public static final String BOUNDARY_TELEPORT_BACK = "TELEPORT_BACK";
+    public static final String BOUNDARY_REMOVE_OUTSIDE = "REMOVE_OUTSIDE";
+
     public String id;
     public String name;
     public String entity;
@@ -20,6 +25,11 @@ public class MobRule {
     public int failedSpawnRetrySeconds = 60;
     public boolean despawnWhenZoneInactive = false;
     public boolean announceOnSpawn = false;
+    public String boundaryMode = BOUNDARY_LEASH;
+    public int boundaryMaxOutsideSeconds = 10;
+    public int boundaryCheckIntervalTicks = 40;
+    public boolean boundaryTeleportBack = true;
+    public transient boolean boundaryModeWasInvalid = false;
     public List<CompanionRule> companions = new ArrayList<>();
 
     public MobRule() {
@@ -51,6 +61,10 @@ public class MobRule {
         rule.failedSpawnRetrySeconds = 60;
         rule.despawnWhenZoneInactive = false;
         rule.announceOnSpawn = false;
+        rule.boundaryMode = BOUNDARY_LEASH;
+        rule.boundaryMaxOutsideSeconds = 10;
+        rule.boundaryCheckIntervalTicks = 40;
+        rule.boundaryTeleportBack = true;
         return rule;
     }
 
@@ -71,6 +85,10 @@ public class MobRule {
         rule.failedSpawnRetrySeconds = 60;
         rule.despawnWhenZoneInactive = false;
         rule.announceOnSpawn = true;
+        rule.boundaryMode = BOUNDARY_TELEPORT_BACK;
+        rule.boundaryMaxOutsideSeconds = 10;
+        rule.boundaryCheckIntervalTicks = 40;
+        rule.boundaryTeleportBack = true;
         return rule;
     }
 
