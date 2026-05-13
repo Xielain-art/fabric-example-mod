@@ -55,11 +55,12 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
         int topY = 56;
 
         addPageNav(startX, panelWidth);
-        addBaseFields(startX, topY, panelWidth);
-        if (page == 1) {
-            addSpawnPage(startX, topY + 120, panelWidth);
+        if (page == 0) {
+            addBaseFields(startX, topY, panelWidth);
+        } else if (page == 1) {
+            addSpawnPage(startX, topY, panelWidth);
         } else if (page == 2) {
-            addAdvancedPage(startX, topY + 120, panelWidth);
+            addAdvancedPage(startX, topY, panelWidth);
         }
 
         int footerY = height - 35;
@@ -280,28 +281,28 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
         context.drawTextWithShadow(textRenderer, "Use the page buttons to switch sections", startX + 110, 29, 0x888888);
 
         if (page == 0) {
-            context.drawTextWithShadow(textRenderer, "Rule Name", startX, 45, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Entity", startX, 85, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Enabled", startX, 125, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Spawn Type", startX + 150, 125, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Boundary Control", startX, 165, 0xA5FFB5);
-            ScreenLayout.drawWrapped(context, textRenderer, boundaryHelp(), startX, 190, panelWidth, 0xAAAAAA);
+            context.drawTextWithShadow(textRenderer, "Rule Name", startX, 50, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Entity", startX, 90, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Enabled", startX, 130, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Spawn Type", startX + 150, 130, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Boundary Control", startX, 170, 0xA5FFB5);
+            ScreenLayout.drawWrapped(context, textRenderer, boundaryHelp(), startX, 195, panelWidth, 0xAAAAAA);
         } else if (page == 1) {
             int half = Math.max(120, (panelWidth - 6) / 2);
-            context.drawTextWithShadow(textRenderer, "Refill Mode", startX, 45, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Max Alive", startX, 81, 0x7FD7A5);
-            context.drawTextWithShadow(textRenderer, "Spawn Count", startX + half + 6, 81, 0x7FD7A5);
-            context.drawTextWithShadow(textRenderer, "Respawn Secs", startX, 117, 0x7FD7A5);
-            context.drawTextWithShadow(textRenderer, "Chance (0..1)", startX + half + 6, 117, 0x7FD7A5);
-            context.drawTextWithShadow(textRenderer, "Retry Seconds", startX, 153, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Despawn When Zone Inactive", startX, 189, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Announce On Spawn", startX, 225, 0xA5FFB5);
-            ScreenLayout.drawWrapped(context, textRenderer, spawnWarning(), startX, 255, panelWidth, draft.spawnType == SpawnType.PACK ? 0xFFAA55 : 0xFFCC66);
+            context.drawTextWithShadow(textRenderer, "Refill Mode", startX, 50, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Max Alive", startX, 86, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Spawn Count", startX + half + 6, 86, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Respawn Secs", startX, 122, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Chance (0..1)", startX + half + 6, 122, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Retry Seconds", startX, 158, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Despawn When Zone Inactive", startX, 194, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Announce On Spawn", startX, 230, 0xA5FFB5);
+            ScreenLayout.drawWrapped(context, textRenderer, spawnWarning(), startX, 260, panelWidth, draft.spawnType == SpawnType.PACK ? 0xFFAA55 : 0xFFCC66);
         } else {
-            context.drawTextWithShadow(textRenderer, "Companions", startX, 45, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "ID", startX, 81, 0x888888);
-            context.drawTextWithShadow(textRenderer, "Advanced Controls", startX, 117, 0xA5FFB5);
-            ScreenLayout.drawWrapped(context, textRenderer, "This page is for companion editing and rule identity only.", startX, 145, panelWidth, 0xAAAAAA);
+            context.drawTextWithShadow(textRenderer, "Companions", startX, 50, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "ID", startX, 86, 0x888888);
+            context.drawTextWithShadow(textRenderer, "Advanced Controls", startX, 122, 0xA5FFB5);
+            ScreenLayout.drawWrapped(context, textRenderer, "This page is for companion editing and rule identity only.", startX, 150, panelWidth, 0xAAAAAA);
         }
 
         if (!error.isBlank()) {

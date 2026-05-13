@@ -9,16 +9,26 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
 
 public class RegionsScreen extends Screen {
+    private final String preferredZoneId;
+    private boolean triedPreferredZoneOpen = false;
     private int page = 0;
     private int pageSize = 1;
     private int totalRows = 0;
 
     public RegionsScreen(String preferredZoneId) {
         super(Text.literal("Gerbarium Zones"));
+        this.preferredZoneId = normalizeZoneId(preferredZoneId);
     }
 
     @Override
     protected void init() {
+        if (!triedPreferredZoneOpen && !preferredZoneId.isBlank() && ClientGerbariumData.findZone(preferredZoneId).isPresent()) {
+            triedPreferredZoneOpen = true;
+            client.setScreen(new ZoneDetailsScreen(preferredZoneId));
+            return;
+        }
+        triedPreferredZoneOpen = true;
+
         clearChildren();
 
         int panelWidth = ScreenLayout.panelWidth(width, 480);
@@ -37,7 +47,8 @@ public class RegionsScreen extends Screen {
         totalRows = total;
         page = Math.max(0, Math.min(page, Math.max(0, (total - 1) / pageSize)));
 
-        if (total > pageSize) {
+        boolean hasPagination = total > pageSize;
+        if (hasPagination) {
             int maxPage = (total - 1) / pageSize;
             int pagY = listY + pageSize * rowH + 6;
             int pageBtnWidth = 100;
@@ -59,16 +70,26 @@ public class RegionsScreen extends Screen {
             }
             Zone zone = ClientGerbariumData.zonesFile().zones.get(idx);
             int rowY = listY + i * rowH;
-            String label = ScreenLayout.trim(textRenderer, zone.id + (zone.enabled ? "" : " [OFF]"), panelWidth - 24);
+            String zoneId = normalizeZoneId(zone.id);
+            String title = zoneId.isBlank() ? safeTitle(zone.name) : zoneId;
+            String label = ScreenLayout.trim(textRenderer, title + (zone.enabled ? "" : " [OFF]"), panelWidth - 24);
 
-            addDrawableChild(ButtonWidget.builder(Text.literal(label), b -> client.setScreen(new ZoneDetailsScreen(zone.id)))
-                    .dimensions(startX, rowY, panelWidth, 20).build());
+            ButtonWidget button = ButtonWidget.builder(Text.literal(label), b -> {
+                        if (!zoneId.isBlank()) {
+                            client.setScreen(new ZoneDetailsScreen(zoneId));
+                        }
+                    })
+                    .dimensions(startX, rowY, panelWidth, 20)
+                    .build();
+            button.active = !zoneId.isBlank();
+            addDrawableChild(button);
         }
 
         int closeWidth = Math.min(160, panelWidth);
         int closeX = width / 2 - closeWidth / 2;
+        int footerY = hasPagination ? listY + pageSize * rowH + 34 : height - 35;
         addDrawableChild(ButtonWidget.builder(Text.literal("Close"), b -> close())
-                .dimensions(closeX, height - 35, closeWidth, 20).build());
+                .dimensions(closeX, footerY, closeWidth, 20).build());
     }
 
     @Override
@@ -96,5 +117,24 @@ public class RegionsScreen extends Screen {
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, amount);
+    }
+
+    private static String normalizeZoneId(String zoneId) {
+        if (zoneId == null) {
+            return "";
+        }
+        String normalized = zoneId.trim();
+        return normalized.equalsIgnoreCase("null") ? "" : normalized;
+    }
+
+    private static String safeTitle(String title) {
+        if (title == null) {
+            return "(unnamed zone)";
+        }
+        String normalized = title.trim();
+        if (normalized.isBlank() || normalized.equalsIgnoreCase("null")) {
+            return "(unnamed zone)";
+        }
+        return normalized;
     }
 }

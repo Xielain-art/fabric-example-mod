@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ResourceRuleEditScreen extends Screen {
-    private static final int PAGE_COUNT = 4;
+    private static final int PAGE_COUNT = 5;
 
     private final String zoneId;
     private final ResourceRule draft;
@@ -81,10 +81,12 @@ public class ResourceRuleEditScreen extends Screen {
         if (page == 0) {
             addBasicsPage(startX, topY, panelWidth);
         } else if (page == 1) {
-            addTargetsPage(startX, topY, panelWidth);
+            addTargetBlocksPage(startX, topY, panelWidth);
         } else if (page == 2) {
-            addLimitsPage(startX, topY, panelWidth);
+            addResourceBlocksPage(startX, topY, panelWidth);
         } else if (page == 3) {
+            addLimitsPage(startX, topY, panelWidth);
+        } else if (page == 4) {
             addSafetyPage(startX, topY, panelWidth);
         }
 
@@ -112,10 +114,11 @@ public class ResourceRuleEditScreen extends Screen {
 
     private String pageLabel() {
         return switch (page) {
-            case 0 -> "Basics 1/4";
-            case 1 -> "Targets 2/4";
-            case 2 -> "Limits 3/4";
-            default -> "Safety 4/4";
+            case 0 -> "Basics 1/5";
+            case 1 -> "Targets 2/5";
+            case 2 -> "Resources 3/5";
+            case 3 -> "Limits 4/5";
+            default -> "Safety 5/5";
         };
     }
 
@@ -138,7 +141,7 @@ public class ResourceRuleEditScreen extends Screen {
                 .build(startX, topY + rowH * 3, 240, 20, Text.literal("Activation Mode"), (b, v) -> {}));
     }
 
-    private void addTargetsPage(int startX, int topY, int panelWidth) {
+    private void addTargetBlocksPage(int startX, int topY, int panelWidth) {
         int half = (panelWidth - 10) / 2;
         int rowH = 28;
 
@@ -160,11 +163,15 @@ public class ResourceRuleEditScreen extends Screen {
                 draft.targetBlocks.remove(draft.targetBlocks.size() - 1);
             }
         }).dimensions(startX, topY + rowH, panelWidth, 20).build());
+    }
 
-        int resY = topY + rowH * 2 + 16;
-        addResourceBlockField = field(startX, resY, half, "minecraft:diamond_ore");
+    private void addResourceBlocksPage(int startX, int topY, int panelWidth) {
+        int half = (panelWidth - 10) / 2;
+        int rowH = 28;
+
+        addResourceBlockField = field(startX, topY, half, "minecraft:diamond_ore");
         addDrawableChild(addResourceBlockField);
-        addResourceWeightField = field(startX + half + 10, resY, 60, "1");
+        addResourceWeightField = field(startX + half + 10, topY, 60, "1");
         addDrawableChild(addResourceWeightField);
         addDrawableChild(ButtonWidget.builder(Text.literal("Add"), b -> {
             String blockId = addResourceBlockField.getText().trim();
@@ -180,13 +187,13 @@ public class ResourceRuleEditScreen extends Screen {
             } else {
                 error = "Block ID must be namespace:path, weight > 0";
             }
-        }).dimensions(startX + half + 76, resY, panelWidth - half - 76, 20).build());
+        }).dimensions(startX + half + 76, topY, panelWidth - half - 76, 20).build());
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Remove Last Resource"), b -> {
             if (!draft.resourceBlocks.isEmpty()) {
                 draft.resourceBlocks.remove(draft.resourceBlocks.size() - 1);
             }
-        }).dimensions(startX, resY + rowH, panelWidth, 20).build());
+        }).dimensions(startX, topY + rowH, panelWidth, 20).build());
     }
 
     private void addLimitsPage(int startX, int topY, int panelWidth) {
@@ -312,32 +319,33 @@ public class ResourceRuleEditScreen extends Screen {
         context.drawTextWithShadow(textRenderer, pageLabel(), startX, 31, 0xA5FFB5);
 
         if (page == 0) {
-            context.drawTextWithShadow(textRenderer, "Rule ID (read-only)", startX, 45, 0x888888);
-            context.drawTextWithShadow(textRenderer, "Name", startX, 85, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Enabled", startX, 125, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Activation Mode", startX + 150, 125, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Rule ID (read-only)", startX, 50, 0x888888);
+            context.drawTextWithShadow(textRenderer, "Name", startX, 90, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Enabled", startX, 130, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Activation Mode", startX + 150, 130, 0xA5FFB5);
         } else if (page == 1) {
-            context.drawTextWithShadow(textRenderer, "Target Blocks", startX, 45, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Target Blocks", startX, 50, 0xA5FFB5);
             String targets = draft.targetBlocks.isEmpty() ? "(none)" : String.join(", ", draft.targetBlocks);
-            ScreenLayout.drawWrapped(context, textRenderer, "Current: " + targets, startX, 106, panelWidth, 0xCCCCCC);
-            context.drawTextWithShadow(textRenderer, "Resource Blocks (block + weight)", startX, 140, 0xA5FFB5);
+            ScreenLayout.drawWrapped(context, textRenderer, "Current: " + targets, startX, 111, panelWidth, 0xCCCCCC);
+        } else if (page == 2) {
+            context.drawTextWithShadow(textRenderer, "Resource Blocks (block + weight)", startX, 50, 0xA5FFB5);
             StringBuilder sb = new StringBuilder();
             for (WeightedBlock wb : draft.resourceBlocks) {
                 if (sb.length() > 0) sb.append(", ");
                 sb.append(wb.block).append(" x").append(wb.weight);
             }
-            ScreenLayout.drawWrapped(context, textRenderer, "Current: " + (sb.length() == 0 ? "(none)" : sb.toString()), startX, 202, panelWidth, 0xCCCCCC);
-        } else if (page == 2) {
-            int half = (panelWidth - 10) / 2;
-            context.drawTextWithShadow(textRenderer, "Max Active Blocks", startX, 45, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Spawn Count", startX + half + 10, 45, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Respawn Seconds", startX, 81, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Chance (0..1)", startX + half + 10, 81, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Min Y", startX, 117, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Max Y", startX + half + 10, 117, 0xA5FFB5);
+            ScreenLayout.drawWrapped(context, textRenderer, "Current: " + (sb.length() == 0 ? "(none)" : sb.toString()), startX, 111, panelWidth, 0xCCCCCC);
         } else if (page == 3) {
-            context.drawTextWithShadow(textRenderer, "Restore Delay Seconds", startX, 45, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Max Position Attempts", startX + 200, 45, 0xA5FFB5);
+            int half = (panelWidth - 10) / 2;
+            context.drawTextWithShadow(textRenderer, "Max Active Blocks", startX, 50, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Spawn Count", startX + half + 10, 50, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Respawn Seconds", startX, 86, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Chance (0..1)", startX + half + 10, 86, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Min Y", startX, 122, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Max Y", startX + half + 10, 122, 0xA5FFB5);
+        } else if (page == 4) {
+            context.drawTextWithShadow(textRenderer, "Restore Delay Seconds", startX, 50, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Max Position Attempts", startX + 200, 50, 0xA5FFB5);
         }
 
         if (!error.isBlank()) {

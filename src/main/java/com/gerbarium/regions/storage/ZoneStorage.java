@@ -262,7 +262,7 @@ public class ZoneStorage {
 
     private Zone zoneFromFiles(ZoneBaseConfig base, MobRulesFile mobs, ResourceRulesFile resources) {
         Zone zone = new Zone();
-        
+        zone.id = base.id;
         zone.name = base.name;
         zone.enabled = base.enabled;
         zone.dimension = base.dimension;

@@ -58,7 +58,8 @@ public class CompanionListScreen extends Screen {
         pageSize = Math.max(1, (listEndY - listStartY) / rowH);
         page = Math.max(0, Math.min(page, Math.max(0, (draft.size() - 1) / pageSize)));
 
-        if (draft.size() > pageSize) {
+        boolean hasPagination = draft.size() > pageSize;
+        if (hasPagination) {
             int maxPage = (draft.size() - 1) / pageSize;
             int pagY = listStartY + pageSize * rowH + 6;
             int pageBtnWidth = 100;
@@ -86,8 +87,9 @@ public class CompanionListScreen extends Screen {
                     .dimensions(startX + panelWidth - 60, rowY, 60, 20).build());
         }
 
+        int footerY = hasPagination ? listStartY + pageSize * rowH + 34 : height - 35;
         addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> client.setScreen(parent))
-                .dimensions(width / 2 - 75, height - 35, 150, 20).build());
+                .dimensions(width / 2 - 75, footerY, 150, 20).build());
     }
 
     public void upsertCompanion(CompanionRule rule, int index) {

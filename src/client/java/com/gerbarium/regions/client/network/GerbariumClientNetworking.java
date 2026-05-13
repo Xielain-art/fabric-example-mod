@@ -24,7 +24,7 @@ public final class GerbariumClientNetworking {
 
     public static void register() {
         ClientPlayNetworking.registerGlobalReceiver(GerbariumPackets.OPEN_GUI, (client, handler, buf, responseSender) -> {
-            preferredZoneId = buf.readString(256);
+            preferredZoneId = normalizeZoneId(buf.readString(256));
 
             client.execute(() -> {
                 requestEntities();
@@ -164,7 +164,15 @@ public final class GerbariumClientNetworking {
     }
 
     public static void setPreferredZoneId(String zoneId) {
-        preferredZoneId = zoneId == null ? "" : zoneId;
+        preferredZoneId = normalizeZoneId(zoneId);
+    }
+
+    private static String normalizeZoneId(String zoneId) {
+        if (zoneId == null) {
+            return "";
+        }
+        String normalized = zoneId.trim();
+        return normalized.equalsIgnoreCase("null") ? "" : normalized;
     }
 }
 

@@ -45,40 +45,29 @@ public class ZoneDetailsScreen extends Screen {
         int visible = Math.max(1, (height - listY - bottomSpace) / rowH);
 
         int actionY = 40;
-        if (panelWidth >= 380) {
-            addDrawableChild(ButtonWidget.builder(Text.literal(z.enabled ? "Disable" : "Enable"), b -> GerbariumClientNetworking.toggleZone(zoneId))
-                    .dimensions(startX, actionY, 86, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal("Select WE"), b -> GerbariumClientNetworking.selectZone(zoneId))
-                    .dimensions(startX + 90, actionY, 86, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal("TP"), b -> GerbariumClientNetworking.tpToZone(zoneId))
-                    .dimensions(startX + 180, actionY, 50, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal("Runtime"), b -> client.setScreen(new ZoneRuntimeSettingsScreen(zoneId)))
-                    .dimensions(startX + 234, actionY, 86, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal("Add Rule"), b -> client.setScreen(new MobRuleEditScreen(zoneId, null)))
-                    .dimensions(startX + panelWidth - 188, actionY, 86, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal("Resources"), b -> client.setScreen(new ZoneResourcesScreen(zoneId)))
-                    .dimensions(startX + panelWidth - 98, actionY, 86, 20).build());
-        } else {
-            addDrawableChild(ButtonWidget.builder(Text.literal(z.enabled ? "Disable" : "Enable"), b -> GerbariumClientNetworking.toggleZone(zoneId))
-                    .dimensions(startX, actionY, 86, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal("Select WE"), b -> GerbariumClientNetworking.selectZone(zoneId))
-                    .dimensions(startX + 90, actionY, 86, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal("TP"), b -> GerbariumClientNetworking.tpToZone(zoneId))
-                    .dimensions(startX + 180, actionY, 50, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal("Runtime"), b -> client.setScreen(new ZoneRuntimeSettingsScreen(zoneId)))
-                    .dimensions(startX, actionY + 24, 136, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal("Add Rule"), b -> client.setScreen(new MobRuleEditScreen(zoneId, null)))
-                    .dimensions(startX + 140, actionY + 24, 136, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal("Resources"), b -> client.setScreen(new ZoneResourcesScreen(zoneId)))
-                    .dimensions(startX + 280, actionY + 24, 136, 20).build());
-        }
+        int gap = 4;
+        int btnW = (panelWidth - gap * 2) / 3;
+        addDrawableChild(ButtonWidget.builder(Text.literal(z.enabled ? "Disable" : "Enable"), b -> GerbariumClientNetworking.toggleZone(zoneId))
+                .dimensions(startX, actionY, btnW, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Select WE"), b -> GerbariumClientNetworking.selectZone(zoneId))
+                .dimensions(startX + btnW + gap, actionY, btnW, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("TP"), b -> GerbariumClientNetworking.tpToZone(zoneId))
+                .dimensions(startX + (btnW + gap) * 2, actionY, btnW, 20).build());
+        int row2Y = actionY + 24;
+        addDrawableChild(ButtonWidget.builder(Text.literal("Runtime"), b -> client.setScreen(new ZoneRuntimeSettingsScreen(zoneId)))
+                .dimensions(startX, row2Y, btnW, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Add Rule"), b -> client.setScreen(new MobRuleEditScreen(zoneId, null)))
+                .dimensions(startX + btnW + gap, row2Y, btnW, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Resources"), b -> client.setScreen(new ZoneResourcesScreen(zoneId)))
+                .dimensions(startX + (btnW + gap) * 2, row2Y, btnW, 20).build());
 
         int total = z.mobs == null ? 0 : z.mobs.size();
         pageSize = visible;
         totalRules = total;
         page = Math.max(0, Math.min(page, Math.max(0, (total - 1) / visible)));
 
-        if (total > visible) {
+        boolean hasPagination = total > visible;
+        if (hasPagination) {
             int maxPage = (total - 1) / visible;
             int pagY = listY + visible * rowH + 6;
             int pageBtnWidth = 100;
@@ -106,7 +95,7 @@ public class ZoneDetailsScreen extends Screen {
                     .dimensions(startX + panelWidth - 54, rowY + 14, 42, 20).build());
         }
 
-        int footerY = height - 35;
+        int footerY = hasPagination ? listY + visible * rowH + 34 : height - 35;
         addDrawableChild(ButtonWidget.builder(Text.literal("Refresh"), b -> GerbariumClientNetworking.requestZones())
                 .dimensions(width / 2 - 114, footerY, 110, 20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> client.setScreen(new RegionsScreen(zoneId)))
