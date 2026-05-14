@@ -16,8 +16,9 @@ import java.util.List;
 
 public final class GerbariumClientNetworking {
     private static final Gson GSON = new Gson();
-    private static final int MAX_STRING_LENGTH = 262144;
+    private static final int MAX_STRING_LENGTH = 1_048_576;
     private static String preferredZoneId = "";
+    private static volatile boolean openGuiAfterZonesSync = false;
 
     private GerbariumClientNetworking() {
     }
@@ -25,6 +26,7 @@ public final class GerbariumClientNetworking {
     public static void register() {
         ClientPlayNetworking.registerGlobalReceiver(GerbariumPackets.OPEN_GUI, (client, handler, buf, responseSender) -> {
             preferredZoneId = normalizeZoneId(buf.readString(256));
+            openGuiAfterZonesSync = true;
 
             client.execute(() -> {
                 requestEntities();
@@ -38,7 +40,10 @@ public final class GerbariumClientNetworking {
 
             client.execute(() -> {
                 ClientGerbariumData.setZonesJson(json);
-                MinecraftClient.getInstance().setScreen(new RegionsScreen(preferredZoneId));
+                if (openGuiAfterZonesSync) {
+                    openGuiAfterZonesSync = false;
+                    MinecraftClient.getInstance().setScreen(new RegionsScreen(preferredZoneId));
+                }
             });
         });
 

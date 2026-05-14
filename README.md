@@ -1,9 +1,21 @@
-# Example Mod
+# Gerbarium Regions Bridge
 
-## Setup
+Fabric mod for zone, mob, and resource rule management.
 
-For setup instructions, please see the [Fabric Documentation page](https://docs.fabricmc.net/develop/getting-started/creating-a-project#setting-up) related to the IDE that you are using.
+## Build
 
-## License
+```bash
+./gradlew build
+```
 
-This template is available under the CC0 license. Feel free to learn from it and incorporate it in your own projects.
+## Run
+
+```bash
+./gradlew runClient
+```
+
+## Notes
+
+- Requires Fabric Loader + Fabric API.
+- Main GUI opens with `/gerb gui`.
+- Zone commands start with `/gerb zone`.

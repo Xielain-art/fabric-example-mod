@@ -5,6 +5,7 @@ import com.gerbarium.regions.model.MobRule;
 import com.gerbarium.regions.model.ResourceRule;
 import com.gerbarium.regions.model.Zone;
 import com.gerbarium.regions.model.ZoneDefaults;
+import com.gerbarium.regions.model.WeightedBlock;
 import com.google.gson.Gson;
 import com.gerbarium.regions.permission.PermissionUtil;
 import com.gerbarium.regions.storage.ZoneStorage;
@@ -30,7 +31,7 @@ import java.util.Optional;
 public final class GerbariumServerNetworking {
     private static final Gson GSON = new Gson();
     private static final ZoneStorage STORAGE = ZoneStorage.getInstance();
-    private static final int MAX_STRING_LENGTH = 262144;
+    private static final int MAX_STRING_LENGTH = 1_048_576;
 
     private GerbariumServerNetworking() {
     }
@@ -456,6 +457,7 @@ public final class GerbariumServerNetworking {
                 try {
                     ZoneDefaults.normalizeResourceRule(incoming);
                     ZoneDefaults.validateResourceRule(incoming);
+                    validateResourceRuleBlocks(server.getRegistryManager().get(RegistryKeys.BLOCK), incoming);
                 } catch (IllegalArgumentException e) {
                     CommandFeedback.error(player.getCommandSource(), e.getMessage());
                     return;
@@ -504,6 +506,7 @@ public final class GerbariumServerNetworking {
                 try {
                     ZoneDefaults.normalizeResourceRule(incoming);
                     ZoneDefaults.validateResourceRule(incoming);
+                    validateResourceRuleBlocks(server.getRegistryManager().get(RegistryKeys.BLOCK), incoming);
                 } catch (IllegalArgumentException e) {
                     CommandFeedback.error(player.getCommandSource(), e.getMessage());
                     return;
@@ -588,5 +591,24 @@ public final class GerbariumServerNetworking {
 
     private static boolean hasAccess(ServerPlayerEntity player) {
         return PermissionUtil.hasAdminPermission(player.getCommandSource());
+    }
+
+    private static void validateResourceRuleBlocks(Registry<Block> blockRegistry, ResourceRule rule) {
+        for (String targetBlock : rule.targetBlocks) {
+            validateExistingBlock(blockRegistry, targetBlock, "targetBlocks");
+        }
+        for (WeightedBlock resourceBlock : rule.resourceBlocks) {
+            validateExistingBlock(blockRegistry, resourceBlock.block, "resourceBlocks");
+        }
+    }
+
+    private static void validateExistingBlock(Registry<Block> blockRegistry, String blockIdText, String fieldName) {
+        Identifier blockId = Identifier.tryParse(blockIdText);
+        if (blockId == null) {
+            throw new IllegalArgumentException("Invalid " + fieldName + " id: " + blockIdText);
+        }
+        if (!blockRegistry.containsId(blockId)) {
+            throw new IllegalArgumentException("Unknown " + fieldName + " id: " + blockId);
+        }
     }
 }

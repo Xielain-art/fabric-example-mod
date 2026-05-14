@@ -12,6 +12,9 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.command.argument.IdentifierArgumentType;
+import net.minecraft.entity.EntityType;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.util.Identifier;
 
@@ -218,6 +221,9 @@ public final class ZoneMobCommand {
             CommandFeedback.error(source, "Zone not found: " + zoneId);
             return 0;
         }
+        if (!validateEntityExists(source, rule.entity, "Mob rule")) {
+            return 0;
+        }
         try {
             ZoneDefaults.validateMobRule(rule);
             ZoneDefaults.normalizeMobRule(rule);
@@ -278,6 +284,9 @@ public final class ZoneMobCommand {
         if (oz.isEmpty()) { CommandFeedback.error(source, "Zone not found: " + zoneId); return 0; }
         Optional<MobRule> or = findRule(oz.get(), ruleId);
         if (or.isEmpty()) { CommandFeedback.error(source, "Mob rule not found: " + ruleId); return 0; }
+        if (!validateEntityExists(source, entity, "Companion")) {
+            return 0;
+        }
         CompanionRule c = new CompanionRule();
         c.id = companionId;
         c.name = companionId;
@@ -298,6 +307,21 @@ public final class ZoneMobCommand {
         storage.addZone(oz.get());
         CommandFeedback.send(source, "Saved companion '" + companionId + "' in rule '" + ruleId + "'.");
         return 1;
+    }
+
+    private static boolean validateEntityExists(ServerCommandSource source, String entity, String label) {
+        Identifier entityId = Identifier.tryParse(entity);
+        if (entityId == null) {
+            CommandFeedback.error(source, "Invalid " + label.toLowerCase() + " entity id: " + entity);
+            return false;
+        }
+
+        Registry<EntityType<?>> registry = source.getServer().getRegistryManager().get(RegistryKeys.ENTITY_TYPE);
+        if (!registry.containsId(entityId)) {
+            CommandFeedback.error(source, "Unknown " + label.toLowerCase() + " entity id: " + entityId);
+            return false;
+        }
+        return true;
     }
 
     private static int removeCompanion(ServerCommandSource source, ZoneStorage storage, String zoneId, String ruleId, String companionId) {

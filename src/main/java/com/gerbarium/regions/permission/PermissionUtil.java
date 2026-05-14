@@ -4,6 +4,7 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 import java.lang.reflect.Method;
+import java.util.Locale;
 
 public final class PermissionUtil {
     private static final int FALLBACK_OP_LEVEL = 2;
@@ -131,9 +132,24 @@ public final class PermissionUtil {
             Object permissionData = getPermissionData.invoke(cachedData);
             Method checkPermission = permissionData.getClass().getMethod("checkPermission", String.class);
             Object triState = checkPermission.invoke(permissionData, permission);
+            if (triState == null) {
+                return null;
+            }
+
+            String state = triState.toString().toUpperCase(Locale.ROOT);
+            if ("UNDEFINED".equals(state)) {
+                return null;
+            }
+            if ("TRUE".equals(state)) {
+                return true;
+            }
+            if ("FALSE".equals(state)) {
+                return false;
+            }
+
             Method asBoolean = triState.getClass().getMethod("asBoolean");
             Object result = asBoolean.invoke(triState);
-            return Boolean.TRUE.equals(result);
+            return result instanceof Boolean allowed ? allowed : null;
         } catch (ClassNotFoundException e) {
             hasLuckPerms = false;
             return null;
