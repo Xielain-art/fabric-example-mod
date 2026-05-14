@@ -4,6 +4,7 @@ import com.gerbarium.regions.command.CommandFeedback;
 import com.gerbarium.regions.model.ResourceRule;
 import com.gerbarium.regions.model.WeightedBlock;
 import com.gerbarium.regions.model.Zone;
+import com.gerbarium.regions.runtime.BridgeRuntimeReloadDispatcher;
 import com.gerbarium.regions.storage.ZoneStorage;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -78,7 +79,7 @@ public final class ZoneResourceCommand {
                                     CommandFeedback.send(ctx.getSource(), "ID: " + r.id + " | Enabled: " + r.enabled);
                                     CommandFeedback.send(ctx.getSource(), "Activation: " + r.activationMode + " | Chance: " + r.chance);
                                     CommandFeedback.send(ctx.getSource(), "Max Active: " + r.maxActiveBlocks + " | Spawn: " + r.spawnCount + " | Respawn: " + r.respawnSeconds + "s");
-                                    CommandFeedback.send(ctx.getSource(), "Y Range: " + r.minY + " to " + r.maxY);
+                                    CommandFeedback.send(ctx.getSource(), "Y Range: " + (r.minY != null ? r.minY : "zone") + " to " + (r.maxY != null ? r.maxY : "zone"));
                                     CommandFeedback.send(ctx.getSource(), "Replace: " + r.replaceMode + " | Restore: " + r.restoreMode);
                                     CommandFeedback.send(ctx.getSource(), "Target blocks: " + (r.targetBlocks == null ? 0 : r.targetBlocks.size()));
                                     if (r.resourceBlocks != null) {
@@ -111,6 +112,8 @@ public final class ZoneResourceCommand {
                                     }
                                     storage.addZone(zone);
                                     CommandFeedback.send(ctx.getSource(), "Removed resource rule: " + ruleId);
+                                    BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                                    BridgeRuntimeReloadDispatcher.sendSavedHint(ctx.getSource());
                                     return 1;
                                 })));
     }

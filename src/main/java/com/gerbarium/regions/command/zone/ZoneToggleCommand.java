@@ -2,6 +2,7 @@ package com.gerbarium.regions.command.zone;
 
 import com.gerbarium.regions.command.CommandFeedback;
 import com.gerbarium.regions.model.Zone;
+import com.gerbarium.regions.runtime.BridgeRuntimeReloadDispatcher;
 import com.gerbarium.regions.storage.ZoneStorage;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -53,6 +54,8 @@ public final class ZoneToggleCommand {
         storage.save();
 
         CommandFeedback.send(source, (enabled ? "Enabled" : "Disabled") + " zone: " + id);
+        BridgeRuntimeReloadDispatcher.reloadIfPresent();
+        BridgeRuntimeReloadDispatcher.sendSavedHint(source);
         return 1;
     }
 }

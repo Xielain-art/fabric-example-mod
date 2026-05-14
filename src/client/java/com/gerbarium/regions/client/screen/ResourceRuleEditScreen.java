@@ -230,8 +230,8 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
         addDrawableChild(respawnField);
         addDrawableChild(chanceField);
 
-        minYField = field(startX, topY + rowH * 2, half, String.valueOf(draft.minY));
-        maxYField = field(startX + half + 10, topY + rowH * 2, half, String.valueOf(draft.maxY));
+        minYField = field(startX, topY + rowH * 2, half, draft.minY == null ? "" : String.valueOf(draft.minY));
+        maxYField = field(startX + half + 10, topY + rowH * 2, half, draft.maxY == null ? "" : String.valueOf(draft.maxY));
         addDrawableChild(minYField);
         addDrawableChild(maxYField);
 
@@ -288,6 +288,18 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
         catch (Exception e) { return fallback; }
     }
 
+    private Integer parseNullableInt(TextFieldWidget f, Integer fallback) {
+        String value = f.getText().trim();
+        if (value.isEmpty()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
+
     private double parseDouble(TextFieldWidget f, double fallback) {
         try { return Double.parseDouble(f.getText().trim()); }
         catch (Exception e) { return fallback; }
@@ -306,8 +318,8 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
         if (spawnCountField != null) draft.spawnCount = parseInt(spawnCountField, draft.spawnCount);
         if (respawnField != null) draft.respawnSeconds = parseInt(respawnField, draft.respawnSeconds);
         if (chanceField != null) draft.chance = parseDouble(chanceField, draft.chance);
-        if (minYField != null) draft.minY = parseInt(minYField, draft.minY);
-        if (maxYField != null) draft.maxY = parseInt(maxYField, draft.maxY);
+        if (minYField != null) draft.minY = parseNullableInt(minYField, draft.minY);
+        if (maxYField != null) draft.maxY = parseNullableInt(maxYField, draft.maxY);
         if (replaceModeButton != null) draft.replaceMode = replaceModeButton.getValue();
         if (restoreModeButton != null) draft.restoreMode = restoreModeButton.getValue();
         if (placementModeButton != null) draft.placementMode = placementModeButton.getValue();
@@ -390,8 +402,8 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
             context.drawTextWithShadow(textRenderer, "Spawn Count", startX + half + 10, 50, 0xA5FFB5);
             context.drawTextWithShadow(textRenderer, "Respawn Seconds", startX, 86, 0xA5FFB5);
             context.drawTextWithShadow(textRenderer, "Chance (0..1)", startX + half + 10, 86, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Min Y", startX, 122, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Max Y", startX + half + 10, 122, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Min Y (blank = zone min)", startX, 122, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Max Y (blank = zone max)", startX + half + 10, 122, 0xA5FFB5);
             context.drawTextWithShadow(textRenderer, "Spacing", startX, 230, 0xA5FFB5);
             context.drawTextWithShadow(textRenderer, "RANDOM_SCATTER, min distance between resources.", startX, 254, 0xAAAAAA);
         } else if (page == 4) {

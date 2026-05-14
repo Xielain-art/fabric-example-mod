@@ -8,6 +8,7 @@ import com.gerbarium.regions.model.ZoneDefaults;
 import com.gerbarium.regions.model.WeightedBlock;
 import com.google.gson.Gson;
 import com.gerbarium.regions.permission.PermissionUtil;
+import com.gerbarium.regions.runtime.BridgeRuntimeReloadDispatcher;
 import com.gerbarium.regions.storage.ZoneStorage;
 import com.gerbarium.regions.worldedit.WorldEditSelectionReader;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
@@ -185,8 +186,10 @@ public final class GerbariumServerNetworking {
 
                 STORAGE.addZone(zone);
                 STORAGE.reload();
+                BridgeRuntimeReloadDispatcher.reloadIfPresent();
 
                 CommandFeedback.send(player.getCommandSource(), "Saved mob rule '" + incoming.id + "' in zone '" + zoneId + "'.");
+                BridgeRuntimeReloadDispatcher.sendSavedHint(player.getCommandSource());
                 sendZones(player);
             });
         });
@@ -235,6 +238,8 @@ public final class GerbariumServerNetworking {
                 }
                 STORAGE.addZone(zone);
                 STORAGE.reload();
+                BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                BridgeRuntimeReloadDispatcher.sendSavedHint(player.getCommandSource());
                 sendZones(player);
             });
         });
@@ -278,8 +283,10 @@ public final class GerbariumServerNetworking {
 
                 STORAGE.save();
                 STORAGE.reload();
+                BridgeRuntimeReloadDispatcher.reloadIfPresent();
 
                 CommandFeedback.send(player.getCommandSource(), "Removed mob rule '" + ruleId + "' from zone '" + zoneId + "'.");
+                BridgeRuntimeReloadDispatcher.sendSavedHint(player.getCommandSource());
                 sendZones(player);
             });
         });
@@ -309,8 +316,10 @@ public final class GerbariumServerNetworking {
 
                 STORAGE.save();
                 STORAGE.reload();
+                BridgeRuntimeReloadDispatcher.reloadIfPresent();
 
                 CommandFeedback.send(player.getCommandSource(), "Zone '" + zoneId + "' is now " + (zone.enabled ? "enabled" : "disabled") + ".");
+                BridgeRuntimeReloadDispatcher.sendSavedHint(player.getCommandSource());
                 sendZones(player);
             });
         });
@@ -478,6 +487,8 @@ public final class GerbariumServerNetworking {
                 try {
                     STORAGE.addZone(zone);
                     CommandFeedback.send(player.getCommandSource(), "Added resource rule: " + incoming.id);
+                    BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                    BridgeRuntimeReloadDispatcher.sendSavedHint(player.getCommandSource());
                 } catch (Exception e) {
                     CommandFeedback.error(player.getCommandSource(), "Failed to save: " + e.getMessage());
                 }
@@ -527,6 +538,8 @@ public final class GerbariumServerNetworking {
                 try {
                     STORAGE.addZone(zone);
                     CommandFeedback.send(player.getCommandSource(), "Updated resource rule: " + incoming.id);
+                    BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                    BridgeRuntimeReloadDispatcher.sendSavedHint(player.getCommandSource());
                 } catch (Exception e) {
                     CommandFeedback.error(player.getCommandSource(), "Failed to save: " + e.getMessage());
                 }
@@ -566,6 +579,8 @@ public final class GerbariumServerNetworking {
                 try {
                     STORAGE.addZone(zone);
                     CommandFeedback.send(player.getCommandSource(), "Removed resource rule: " + ruleId);
+                    BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                    BridgeRuntimeReloadDispatcher.sendSavedHint(player.getCommandSource());
                 } catch (Exception e) {
                     CommandFeedback.error(player.getCommandSource(), "Failed to save: " + e.getMessage());
                 }

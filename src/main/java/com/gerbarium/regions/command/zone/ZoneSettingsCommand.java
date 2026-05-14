@@ -3,6 +3,7 @@ package com.gerbarium.regions.command.zone;
 import com.gerbarium.regions.command.CommandFeedback;
 import com.gerbarium.regions.model.Zone;
 import com.gerbarium.regions.model.ZoneDefaults;
+import com.gerbarium.regions.runtime.BridgeRuntimeReloadDispatcher;
 import com.gerbarium.regions.storage.ZoneStorage;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -81,6 +82,8 @@ public final class ZoneSettingsCommand {
         }
         storage.addZone(z);
         CommandFeedback.send(source, "Updated settings for zone '" + zoneId + "'.");
+        BridgeRuntimeReloadDispatcher.reloadIfPresent();
+        BridgeRuntimeReloadDispatcher.sendSavedHint(source);
         return 1;
     }
 

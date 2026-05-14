@@ -5,6 +5,7 @@ import com.gerbarium.regions.model.CompanionRule;
 import com.gerbarium.regions.model.MobRule;
 import com.gerbarium.regions.model.Zone;
 import com.gerbarium.regions.model.ZoneDefaults;
+import com.gerbarium.regions.runtime.BridgeRuntimeReloadDispatcher;
 import com.gerbarium.regions.storage.ZoneStorage;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
@@ -129,7 +130,9 @@ public final class ZoneMobCommand {
                                                                     }
 
                                                                     storage.addZone(oz.get());
+                                                                    BridgeRuntimeReloadDispatcher.reloadIfPresent();
                                                                     CommandFeedback.send(ctx.getSource(), "Updated boundary settings for rule '" + ruleId + "'.");
+                                                                    BridgeRuntimeReloadDispatcher.sendSavedHint(ctx.getSource());
                                                                     return 1;
                                                                 })))))));
     }
@@ -151,6 +154,8 @@ public final class ZoneMobCommand {
                     }
                     storage.addZone(zone);
                     CommandFeedback.send(ctx.getSource(), "Removed mob rule '" + id + "'.");
+                    BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                    BridgeRuntimeReloadDispatcher.sendSavedHint(ctx.getSource());
                     return 1;
                 })));
     }
@@ -174,6 +179,8 @@ public final class ZoneMobCommand {
                                     r.get().enabled = enabled;
                                     storage.addZone(oz.get());
                                     CommandFeedback.send(ctx.getSource(), (enabled ? "Enabled" : "Disabled") + " rule '" + ruleId + "'.");
+                                    BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                                    BridgeRuntimeReloadDispatcher.sendSavedHint(ctx.getSource());
                                     return 1;
                                 })));
     }
@@ -236,6 +243,8 @@ public final class ZoneMobCommand {
         zone.mobs.add(rule);
         storage.addZone(zone);
         CommandFeedback.send(source, "Saved rule '" + displayName(rule) + "' in zone '" + zoneId + "'.");
+        BridgeRuntimeReloadDispatcher.reloadIfPresent();
+        BridgeRuntimeReloadDispatcher.sendSavedHint(source);
         return 1;
     }
 

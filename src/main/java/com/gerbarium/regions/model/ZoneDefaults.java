@@ -366,7 +366,7 @@ public final class ZoneDefaults {
         if (rule.chance < 0.0 || rule.chance > 1.0) {
             throw new IllegalArgumentException("chance must be 0..1");
         }
-        if (rule.minY > rule.maxY) {
+        if (rule.minY != null && rule.maxY != null && rule.minY > rule.maxY) {
             throw new IllegalArgumentException("minY must be <= maxY");
         }
         if (rule.restoreDelaySeconds < 0) {

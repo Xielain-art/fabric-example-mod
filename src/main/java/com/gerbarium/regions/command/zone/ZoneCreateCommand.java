@@ -2,6 +2,7 @@ package com.gerbarium.regions.command.zone;
 
 import com.gerbarium.regions.command.CommandFeedback;
 import com.gerbarium.regions.model.Zone;
+import com.gerbarium.regions.runtime.BridgeRuntimeReloadDispatcher;
 import com.gerbarium.regions.storage.ZoneStorage;
 import com.gerbarium.regions.worldedit.WorldEditSelectionReader;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -37,9 +38,11 @@ public final class ZoneCreateCommand {
 
                                 storage.addZone(zone);
                                 storage.reload();
+                                BridgeRuntimeReloadDispatcher.reloadIfPresent();
 
                                 CommandFeedback.send(context.getSource(), "Created zone '" + id + "' from WorldEdit selection.");
                                 CommandFeedback.send(context.getSource(), "Saved to config/gerbarium/zones/" + id + "/zone.json");
+                                BridgeRuntimeReloadDispatcher.sendSavedHint(context.getSource());
                                 CommandFeedback.send(context.getSource(), "Use /gerb zone gui " + id + " to edit it.");
 
                                 return 1;

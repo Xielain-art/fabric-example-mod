@@ -17,8 +17,8 @@ public class ResourceRule {
     public int respawnSeconds = 900;
     public double chance = 1.0;
 
-    public int minY = -64;
-    public int maxY = 16;
+    public Integer minY = null;
+    public Integer maxY = null;
 
     public ReplaceMode replaceMode = ReplaceMode.ONLY_TARGET_BLOCKS;
     public RestoreMode restoreMode = RestoreMode.RESTORE_ORIGINAL;
