@@ -393,8 +393,10 @@ public final class GerbariumServerNetworking {
                 }
 
                 STORAGE.reload();
+                BridgeRuntimeReloadDispatcher.reloadIfPresent();
 
                 CommandFeedback.send(player.getCommandSource(), "Deleted zone: " + zoneId);
+                BridgeRuntimeReloadDispatcher.sendSavedHint(player.getCommandSource());
                 sendZones(player);
             });
         });

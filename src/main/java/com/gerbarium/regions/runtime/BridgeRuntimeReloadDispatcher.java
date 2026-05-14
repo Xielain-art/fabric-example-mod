@@ -23,7 +23,7 @@ public final class BridgeRuntimeReloadDispatcher {
     }
 
     public static void sendSavedHint(ServerCommandSource source) {
-        CommandFeedback.send(source, "Saved. Run /gerbzone reload and /gerbresource reload to apply runtime changes.");
+        CommandFeedback.send(source, "Saved. Runtime reload was triggered automatically. If changes do not appear, run /gerbzone reload and /gerbresource reload.");
     }
 
     private static void trigger(String modId, String className) {
