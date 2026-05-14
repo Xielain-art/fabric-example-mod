@@ -13,7 +13,7 @@ import net.minecraft.text.Text;
 
 import java.util.Optional;
 
-public class ZoneDetailsScreen extends Screen {
+public class ZoneDetailsScreen extends Screen implements GerbariumRefreshableScreen {
     private final String zoneId;
     private int page = 0;
     private int pageSize = 0;
@@ -171,5 +171,10 @@ public class ZoneDetailsScreen extends Screen {
     private String boundarySummary(MobRule rule) {
         String mode = rule.boundaryMode == null || rule.boundaryMode.isBlank() ? MobRule.BOUNDARY_LEASH : rule.boundaryMode;
         return rule.boundaryMaxOutsideSeconds > 0 ? mode + ", " + rule.boundaryMaxOutsideSeconds + "s" : mode;
+    }
+
+    @Override
+    public void refreshFromSync() {
+        init();
     }
 }

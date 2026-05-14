@@ -1,6 +1,7 @@
 package com.gerbarium.regions.client.network;
 
 import com.gerbarium.regions.client.data.ClientGerbariumData;
+import com.gerbarium.regions.client.screen.GerbariumRefreshableScreen;
 import com.gerbarium.regions.client.screen.RegionsScreen;
 import com.gerbarium.regions.model.MobRule;
 import com.gerbarium.regions.model.ResourceRule;
@@ -43,6 +44,11 @@ public final class GerbariumClientNetworking {
                 if (openGuiAfterZonesSync) {
                     openGuiAfterZonesSync = false;
                     MinecraftClient.getInstance().setScreen(new RegionsScreen(preferredZoneId));
+                    return;
+                }
+
+                if (MinecraftClient.getInstance().currentScreen instanceof GerbariumRefreshableScreen refreshable) {
+                    refreshable.refreshFromSync();
                 }
             });
         });

@@ -8,7 +8,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
 
-public class RegionsScreen extends Screen {
+public class RegionsScreen extends Screen implements GerbariumRefreshableScreen {
     private final String preferredZoneId;
     private boolean triedPreferredZoneOpen = false;
     private int page = 0;
@@ -136,5 +136,10 @@ public class RegionsScreen extends Screen {
             return "(unnamed zone)";
         }
         return normalized;
+    }
+
+    @Override
+    public void refreshFromSync() {
+        init();
     }
 }

@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-public class ZoneResourcesScreen extends Screen {
+public class ZoneResourcesScreen extends Screen implements GerbariumRefreshableScreen {
     private final String zoneId;
     private int page = 0;
     private int pageSize = 0;
@@ -190,5 +190,10 @@ public class ZoneResourcesScreen extends Screen {
         int resources = rule.resourceBlocks == null ? 0 : rule.resourceBlocks.size();
         String mode = rule.activationMode == null ? "REAL_TIME" : rule.activationMode.name();
         return "targets=" + targets + " resources=" + resources + " max=" + rule.maxActiveBlocks + " respawn=" + rule.respawnSeconds + "s chance=" + rule.chance + " " + mode;
+    }
+
+    @Override
+    public void refreshFromSync() {
+        init();
     }
 }
