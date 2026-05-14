@@ -18,24 +18,27 @@ public final class BridgeRuntimeReloadDispatcher {
     }
 
     public static void reloadIfPresent() {
-        trigger(ZONES_RUNTIME_MOD_ID, ZONES_RUNTIME_API);
-        trigger(RESOURCES_RUNTIME_MOD_ID, RESOURCES_RUNTIME_API);
+        if (!trigger(ZONES_RUNTIME_MOD_ID, ZONES_RUNTIME_API, "reload")) {
+            trigger(RESOURCES_RUNTIME_MOD_ID, RESOURCES_RUNTIME_API, "reload");
+        }
     }
 
     public static void sendSavedHint(ServerCommandSource source) {
         CommandFeedback.send(source, "Saved. Runtime reload was triggered automatically. If changes do not appear, run /gerbzone reload and /gerbresource reload.");
     }
 
-    private static void trigger(String modId, String className) {
+    private static boolean trigger(String modId, String className, String methodName) {
         if (!FabricLoader.getInstance().isModLoaded(modId)) {
-            return;
+            return false;
         }
         try {
             Class<?> apiClass = Class.forName(className);
-            Method reloadMethod = apiClass.getMethod("reload");
+            Method reloadMethod = apiClass.getMethod(methodName);
             reloadMethod.invoke(null);
+            return true;
         } catch (Exception e) {
             GerbariumRegionsBridge.LOGGER.warn("[Gerbarium] Failed to trigger runtime reload API for mod '{}': {}", modId, e.getMessage());
+            return false;
         }
     }
 }

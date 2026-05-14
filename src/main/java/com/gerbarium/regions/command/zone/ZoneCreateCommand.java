@@ -7,7 +7,6 @@ import com.gerbarium.regions.storage.ZoneStorage;
 import com.gerbarium.regions.worldedit.WorldEditSelectionReader;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.sk89q.worldedit.IncompleteRegionException;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 
@@ -32,6 +31,10 @@ public final class ZoneCreateCommand {
                             }
 
                             ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+                            if (!WorldEditSelectionReader.isAvailable()) {
+                                CommandFeedback.error(context.getSource(), "WorldEdit mod is not loaded. Zone create from selection is unavailable.");
+                                return 0;
+                            }
 
                             try {
                                 Zone zone = WorldEditSelectionReader.readSelection(player, id);
@@ -46,11 +49,13 @@ public final class ZoneCreateCommand {
                                 CommandFeedback.send(context.getSource(), "Use /gerb zone gui " + id + " to edit it.");
 
                                 return 1;
-                            } catch (IncompleteRegionException e) {
-                                CommandFeedback.error(context.getSource(), "Selection is incomplete. Use //wand and select pos1/pos2 first.");
-                                return 0;
                             } catch (Exception e) {
-                                CommandFeedback.error(context.getSource(), "Failed to create zone: " + e.getMessage());
+                                String message = e.getMessage() == null ? "unknown error" : e.getMessage();
+                                if (message.contains("selection") || message.contains("Region") || message.contains("Incomplete")) {
+                                    CommandFeedback.error(context.getSource(), "Selection is incomplete. Use //wand and select pos1/pos2 first.");
+                                    return 0;
+                                }
+                                CommandFeedback.error(context.getSource(), "Failed to create zone: " + message);
                                 return 0;
                             }
                         })

@@ -345,6 +345,10 @@ public final class GerbariumServerNetworking {
                 }
 
                 try {
+                    if (!WorldEditSelectionReader.isAvailable()) {
+                        CommandFeedback.error(player.getCommandSource(), "WorldEdit mod is not loaded. Zone selection sync is unavailable.");
+                        return;
+                    }
                     WorldEditSelectionReader.clearSelection(player);
                     WorldEditSelectionReader.applySelection(player, optionalZone.get());
 
@@ -364,6 +368,10 @@ public final class GerbariumServerNetworking {
                 }
 
                 try {
+                    if (!WorldEditSelectionReader.isAvailable()) {
+                        CommandFeedback.error(player.getCommandSource(), "WorldEdit mod is not loaded. Zone selection sync is unavailable.");
+                        return;
+                    }
                     WorldEditSelectionReader.clearSelection(player);
                     CommandFeedback.send(player.getCommandSource(), "WorldEdit selection cleared.");
                 } catch (Exception e) {

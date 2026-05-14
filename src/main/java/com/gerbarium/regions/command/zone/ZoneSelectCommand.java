@@ -32,6 +32,10 @@ public final class ZoneSelectCommand {
 
                             try {
                                 ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+                                if (!WorldEditSelectionReader.isAvailable()) {
+                                    CommandFeedback.error(context.getSource(), "WorldEdit mod is not loaded. Zone selection sync is unavailable.");
+                                    return 0;
+                                }
                                 Zone zone = optionalZone.get();
 
                                 String playerDimension = player.getServerWorld()

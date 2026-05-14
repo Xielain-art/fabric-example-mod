@@ -23,7 +23,9 @@
     "minecraft": "1.20.1",
     "java": ">=17",
     "fabric-api": "*",
-    "worldedit": "*",
     "owo": "*"
+  },
+  "suggests": {
+    "worldedit": "*"
   }
 }
