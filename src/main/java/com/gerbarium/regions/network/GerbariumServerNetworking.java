@@ -281,9 +281,15 @@ public final class GerbariumServerNetworking {
                     return;
                 }
 
-                STORAGE.save();
-                STORAGE.reload();
-                BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                try {
+                    STORAGE.addZone(zone);
+                    STORAGE.reload();
+                    BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                } catch (RuntimeException e) {
+                    CommandFeedback.error(player.getCommandSource(), "Failed to save zone changes: " + e.getMessage());
+                    sendZones(player);
+                    return;
+                }
 
                 CommandFeedback.send(player.getCommandSource(), "Removed mob rule '" + ruleId + "' from zone '" + zoneId + "'.");
                 BridgeRuntimeReloadDispatcher.sendSavedHint(player.getCommandSource());
@@ -314,9 +320,15 @@ public final class GerbariumServerNetworking {
                 Zone zone = optionalZone.get();
                 zone.enabled = !zone.enabled;
 
-                STORAGE.save();
-                STORAGE.reload();
-                BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                try {
+                    STORAGE.addZone(zone);
+                    STORAGE.reload();
+                    BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                } catch (RuntimeException e) {
+                    CommandFeedback.error(player.getCommandSource(), "Failed to save zone changes: " + e.getMessage());
+                    sendZones(player);
+                    return;
+                }
 
                 CommandFeedback.send(player.getCommandSource(), "Zone '" + zoneId + "' is now " + (zone.enabled ? "enabled" : "disabled") + ".");
                 BridgeRuntimeReloadDispatcher.sendSavedHint(player.getCommandSource());
@@ -496,6 +508,7 @@ public final class GerbariumServerNetworking {
 
                 try {
                     STORAGE.addZone(zone);
+                    STORAGE.reload();
                     CommandFeedback.send(player.getCommandSource(), "Added resource rule: " + incoming.id);
                     BridgeRuntimeReloadDispatcher.reloadIfPresent();
                     BridgeRuntimeReloadDispatcher.sendSavedHint(player.getCommandSource());
@@ -547,6 +560,7 @@ public final class GerbariumServerNetworking {
 
                 try {
                     STORAGE.addZone(zone);
+                    STORAGE.reload();
                     CommandFeedback.send(player.getCommandSource(), "Updated resource rule: " + incoming.id);
                     BridgeRuntimeReloadDispatcher.reloadIfPresent();
                     BridgeRuntimeReloadDispatcher.sendSavedHint(player.getCommandSource());
@@ -588,6 +602,7 @@ public final class GerbariumServerNetworking {
 
                 try {
                     STORAGE.addZone(zone);
+                    STORAGE.reload();
                     CommandFeedback.send(player.getCommandSource(), "Removed resource rule: " + ruleId);
                     BridgeRuntimeReloadDispatcher.reloadIfPresent();
                     BridgeRuntimeReloadDispatcher.sendSavedHint(player.getCommandSource());

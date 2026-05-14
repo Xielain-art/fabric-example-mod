@@ -9,6 +9,12 @@ public class MobRule {
     public static final String BOUNDARY_LEASH = "LEASH";
     public static final String BOUNDARY_TELEPORT_BACK = "TELEPORT_BACK";
     public static final String BOUNDARY_REMOVE_OUTSIDE = "REMOVE_OUTSIDE";
+    public static final String SPAWN_MODE_RANDOM_VALID_POSITION = "RANDOM_VALID_POSITION";
+    public static final String SPAWN_MODE_CENTER = "CENTER";
+    public static final String SPAWN_MODE_NEAR_CENTER = "NEAR_CENTER";
+    public static final String SPAWN_MODE_FIXED_POINT = "FIXED_POINT";
+    public static final String SPAWN_MODE_PLAYER_NEARBY = "PLAYER_NEARBY";
+    public static final String SPAWN_MODE_BOSS_ROOM = "BOSS_ROOM";
 
     public String id;
     public String name;
@@ -30,6 +36,14 @@ public class MobRule {
     public int boundaryMaxOutsideSeconds = 10;
     public int boundaryCheckIntervalTicks = 40;
     public boolean boundaryTeleportBack = true;
+    public String spawnMode = SPAWN_MODE_RANDOM_VALID_POSITION;
+    public Integer fixedX;
+    public Integer fixedY;
+    public Integer fixedZ;
+    public boolean allowSmallRoom = true;
+    public int positionAttempts = 128;
+    public int minDistanceBetweenSpawns = 2;
+    public boolean spreadSpawns = true;
     public transient boolean boundaryModeWasInvalid = false;
     public List<CompanionRule> companions = new ArrayList<>();
 
@@ -66,6 +80,11 @@ public class MobRule {
         rule.boundaryMaxOutsideSeconds = 10;
         rule.boundaryCheckIntervalTicks = 40;
         rule.boundaryTeleportBack = true;
+        rule.spawnMode = SPAWN_MODE_RANDOM_VALID_POSITION;
+        rule.allowSmallRoom = true;
+        rule.positionAttempts = 128;
+        rule.minDistanceBetweenSpawns = 2;
+        rule.spreadSpawns = true;
         return rule;
     }
 
@@ -90,6 +109,11 @@ public class MobRule {
         rule.boundaryMaxOutsideSeconds = 10;
         rule.boundaryCheckIntervalTicks = 40;
         rule.boundaryTeleportBack = true;
+        rule.spawnMode = SPAWN_MODE_BOSS_ROOM;
+        rule.allowSmallRoom = true;
+        rule.positionAttempts = 128;
+        rule.minDistanceBetweenSpawns = 2;
+        rule.spreadSpawns = true;
         return rule;
     }
 

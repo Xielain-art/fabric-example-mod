@@ -18,9 +18,8 @@ public final class BridgeRuntimeReloadDispatcher {
     }
 
     public static void reloadIfPresent() {
-        if (!trigger(ZONES_RUNTIME_MOD_ID, ZONES_RUNTIME_API, "reload")) {
-            trigger(RESOURCES_RUNTIME_MOD_ID, RESOURCES_RUNTIME_API, "reload");
-        }
+        trigger(ZONES_RUNTIME_MOD_ID, ZONES_RUNTIME_API, "reload");
+        trigger(RESOURCES_RUNTIME_MOD_ID, RESOURCES_RUNTIME_API, "reload");
     }
 
     public static void sendSavedHint(ServerCommandSource source) {

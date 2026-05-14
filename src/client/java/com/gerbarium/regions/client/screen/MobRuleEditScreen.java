@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer {
-    private static final int PAGE_COUNT = 3;
+    private static final int PAGE_COUNT = 4;
 
     private final String zoneId;
     private MobRule draft;
@@ -31,10 +31,18 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
     private TextFieldWidget respawnField;
     private TextFieldWidget chanceField;
     private TextFieldWidget retryField;
+    private TextFieldWidget fixedXField;
+    private TextFieldWidget fixedYField;
+    private TextFieldWidget fixedZField;
+    private TextFieldWidget positionAttemptsField;
+    private TextFieldWidget minDistanceField;
 
     private CyclingButtonWidget<Boolean> enabledButton;
     private CyclingButtonWidget<SpawnType> spawnTypeButton;
     private CyclingButtonWidget<RefillMode> refillModeButton;
+    private CyclingButtonWidget<String> spawnModeButton;
+    private CyclingButtonWidget<Boolean> allowSmallRoomButton;
+    private CyclingButtonWidget<Boolean> spreadSpawnsButton;
     private CyclingButtonWidget<Boolean> despawnButton;
     private CyclingButtonWidget<Boolean> announceButton;
 
@@ -52,7 +60,7 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
 
         int panelWidth = ScreenLayout.panelWidth(width, 700);
         int startX = ScreenLayout.panelLeft(width, panelWidth);
-        int topY = 56;
+        int topY = contentTopY();
 
         addPageNav(startX, panelWidth);
         if (page == 0) {
@@ -60,6 +68,8 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
         } else if (page == 1) {
             addSpawnPage(startX, topY, panelWidth);
         } else if (page == 2) {
+            addPlacementPage(startX, topY, panelWidth);
+        } else if (page == 3) {
             addAdvancedPage(startX, topY, panelWidth);
         }
 
@@ -87,9 +97,10 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
 
     private String pageLabel() {
         return switch (page) {
-            case 0 -> "Basics 1/3";
-            case 1 -> "Spawn 2/3";
-            default -> "Advanced 3/3";
+            case 0 -> "Basics 1/4";
+            case 1 -> "Spawn 2/4";
+            case 2 -> "Placement 3/4";
+            default -> "Advanced 4/4";
         };
     }
 
@@ -133,7 +144,7 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
     }
 
     private void addSpawnPage(int startX, int topY, int panelWidth) {
-        int rowH = 36;
+        int rowH = compactRowH();
         int half = Math.max(120, (panelWidth - 6) / 2);
 
         refillModeButton = addDrawableChild(CyclingButtonWidget.<RefillMode>builder(v -> Text.literal(v.name()))
@@ -155,17 +166,10 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
         retryField = field(startX, y3, panelWidth, String.valueOf(draft.failedSpawnRetrySeconds));
         addDrawableChild(retryField);
 
-        despawnButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.despawnWhenZoneInactive)
-                .build(startX, y3 + rowH, panelWidth, 20, Text.literal("Despawn When Zone Inactive"), (b, v) -> {}));
-
-        int y4 = y3 + rowH * 2;
-        announceButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.announceOnSpawn)
-                .build(startX, y4, panelWidth, 20, Text.literal("Announce On Spawn"), (b, v) -> {}));
-
     }
 
     private void addAdvancedPage(int startX, int topY, int panelWidth) {
-        int rowH = 36;
+        int rowH = compactRowH();
         int companionCount = draft.companions == null ? 0 : draft.companions.size();
         addDrawableChild(ButtonWidget.builder(Text.literal("Edit Companions"), b -> {
             capture();
@@ -181,6 +185,73 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
         addDrawableChild(ButtonWidget.builder(Text.literal(draft.id == null ? "" : draft.id), b -> {})
                 .dimensions(startX + 84, topY + rowH, Math.max(180, panelWidth - 84), 20).build());
 
+        despawnButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.despawnWhenZoneInactive)
+                .build(startX, topY + rowH * 2, panelWidth, 20, Text.literal("Despawn When Zone Inactive"), (b, v) -> {}));
+
+        announceButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.announceOnSpawn)
+                .build(startX, topY + rowH * 3, panelWidth, 20, Text.literal("Announce On Spawn"), (b, v) -> {}));
+
+    }
+
+    private void addPlacementPage(int startX, int topY, int panelWidth) {
+        int rowH = compactRowH();
+        int third = Math.max(70, (panelWidth - 12) / 3);
+        int half = Math.max(120, (panelWidth - 6) / 2);
+
+        spawnModeButton = addDrawableChild(CyclingButtonWidget.<String>builder(Text::literal)
+                .values(List.of(
+                        MobRule.SPAWN_MODE_RANDOM_VALID_POSITION,
+                        MobRule.SPAWN_MODE_CENTER,
+                        MobRule.SPAWN_MODE_BOSS_ROOM,
+                        MobRule.SPAWN_MODE_FIXED_POINT))
+                .initially(draft.spawnMode == null ? MobRule.SPAWN_MODE_RANDOM_VALID_POSITION : draft.spawnMode)
+                .build(startX, topY, panelWidth, 20, Text.literal("Spawn Mode"), (b, v) -> {
+                    capture();
+                    draft.spawnMode = v;
+                    if (MobRule.SPAWN_MODE_BOSS_ROOM.equals(v)) {
+                        draft.allowSmallRoom = true;
+                        draft.spawnCount = Math.max(1, Math.min(draft.spawnCount, 1));
+                        draft.maxAlive = Math.max(1, Math.min(draft.maxAlive, 1));
+                    }
+                    init();
+                }));
+
+        fixedXField = field(startX, topY + rowH, third, draft.fixedX == null ? "" : String.valueOf(draft.fixedX));
+        fixedYField = field(startX + third + 6, topY + rowH, third, draft.fixedY == null ? "" : String.valueOf(draft.fixedY));
+        fixedZField = field(startX + (third + 6) * 2, topY + rowH, third, draft.fixedZ == null ? "" : String.valueOf(draft.fixedZ));
+        addDrawableChild(fixedXField);
+        addDrawableChild(fixedYField);
+        addDrawableChild(fixedZField);
+
+        positionAttemptsField = field(startX, topY + rowH * 2, half, String.valueOf(draft.positionAttempts));
+        minDistanceField = field(startX + half + 6, topY + rowH * 2, half, String.valueOf(draft.minDistanceBetweenSpawns));
+        addDrawableChild(positionAttemptsField);
+        addDrawableChild(minDistanceField);
+
+        allowSmallRoomButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.allowSmallRoom)
+                .build(startX, topY + rowH * 3, half, 20, Text.literal("Allow Small Room"), (b, v) -> {}));
+        spreadSpawnsButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.spreadSpawns)
+                .build(startX + half + 6, topY + rowH * 3, half, 20, Text.literal("Spread Spawns"), (b, v) -> {}));
+
+        addDrawableChild(ButtonWidget.builder(Text.literal("Boss Preset"), b -> {
+            capture();
+            draft.spawnType = SpawnType.UNIQUE;
+            draft.refillMode = RefillMode.AFTER_DEATH;
+            draft.spawnMode = MobRule.SPAWN_MODE_BOSS_ROOM;
+            draft.allowSmallRoom = true;
+            draft.spawnCount = 1;
+            draft.maxAlive = 1;
+            draft.spreadSpawns = false;
+            init();
+        }).dimensions(startX, topY + rowH * 4, panelWidth, 20).build());
+    }
+
+    private int contentTopY() {
+        return height < 220 ? 48 : 56;
+    }
+
+    private int compactRowH() {
+        return height < 220 ? 24 : 36;
     }
 
     private TextFieldWidget field(int x, int y, int w, String value) {
@@ -205,6 +276,9 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
         if (refillModeButton != null) {
             draft.refillMode = refillModeButton.getValue();
         }
+        if (spawnModeButton != null) {
+            draft.spawnMode = spawnModeButton.getValue();
+        }
         if (maxAliveField != null) {
             draft.maxAlive = parseInt(maxAliveField, draft.maxAlive);
         }
@@ -220,6 +294,27 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
         if (retryField != null) {
             draft.failedSpawnRetrySeconds = parseInt(retryField, draft.failedSpawnRetrySeconds);
         }
+        if (fixedXField != null) {
+            draft.fixedX = parseNullableInt(fixedXField);
+        }
+        if (fixedYField != null) {
+            draft.fixedY = parseNullableInt(fixedYField);
+        }
+        if (fixedZField != null) {
+            draft.fixedZ = parseNullableInt(fixedZField);
+        }
+        if (positionAttemptsField != null) {
+            draft.positionAttempts = parseInt(positionAttemptsField, draft.positionAttempts);
+        }
+        if (minDistanceField != null) {
+            draft.minDistanceBetweenSpawns = parseInt(minDistanceField, draft.minDistanceBetweenSpawns);
+        }
+        if (allowSmallRoomButton != null) {
+            draft.allowSmallRoom = allowSmallRoomButton.getValue();
+        }
+        if (spreadSpawnsButton != null) {
+            draft.spreadSpawns = spreadSpawnsButton.getValue();
+        }
         if (despawnButton != null) {
             draft.despawnWhenZoneInactive = despawnButton.getValue();
         }
@@ -233,6 +328,18 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
             return Integer.parseInt(f.getText().trim());
         } catch (Exception e) {
             return d;
+        }
+    }
+
+    private Integer parseNullableInt(TextFieldWidget f) {
+        String text = f.getText().trim();
+        if (text.isEmpty()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(text);
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -289,20 +396,40 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
             ScreenLayout.drawWrapped(context, textRenderer, boundaryHelp(), startX, 195, panelWidth, 0xAAAAAA);
         } else if (page == 1) {
             int half = Math.max(120, (panelWidth - 6) / 2);
-            context.drawTextWithShadow(textRenderer, "Refill Mode", startX, 50, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Max Alive", startX, 86, 0x7FD7A5);
-            context.drawTextWithShadow(textRenderer, "Spawn Count", startX + half + 6, 86, 0x7FD7A5);
-            context.drawTextWithShadow(textRenderer, "Respawn Secs", startX, 122, 0x7FD7A5);
-            context.drawTextWithShadow(textRenderer, "Chance (0..1)", startX + half + 6, 122, 0x7FD7A5);
-            context.drawTextWithShadow(textRenderer, "Retry Seconds", startX, 158, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Despawn When Zone Inactive", startX, 194, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Announce On Spawn", startX, 230, 0xA5FFB5);
-            ScreenLayout.drawWrapped(context, textRenderer, spawnWarning(), startX, 260, panelWidth, draft.spawnType == SpawnType.PACK ? 0xFFAA55 : 0xFFCC66);
+            int topY = contentTopY();
+            int rowH = compactRowH();
+            context.drawTextWithShadow(textRenderer, "Refill Mode", startX, topY - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Max Alive", startX, topY + rowH - 6, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Spawn Count", startX + half + 6, topY + rowH - 6, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Respawn Secs", startX, topY + rowH * 2 - 6, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Chance (0..1)", startX + half + 6, topY + rowH * 2 - 6, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Retry Seconds", startX, topY + rowH * 3 - 6, 0xA5FFB5);
+            if (height >= 240) {
+                ScreenLayout.drawWrapped(context, textRenderer, spawnWarning(), startX, topY + rowH * 4 + 4, panelWidth, draft.spawnType == SpawnType.PACK ? 0xFFAA55 : 0xFFCC66);
+            }
+        } else if (page == 2) {
+            int third = Math.max(70, (panelWidth - 12) / 3);
+            int half = Math.max(120, (panelWidth - 6) / 2);
+            int topY = contentTopY();
+            int rowH = compactRowH();
+            context.drawTextWithShadow(textRenderer, "Spawn Mode", startX, topY - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Fixed X", startX, topY + rowH - 6, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Fixed Y", startX + third + 6, topY + rowH - 6, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Fixed Z", startX + (third + 6) * 2, topY + rowH - 6, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Attempts", startX, topY + rowH * 2 - 6, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Min Distance", startX + half + 6, topY + rowH * 2 - 6, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Small Room", startX, topY + rowH * 3 - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Spread", startX + half + 6, topY + rowH * 3 - 6, 0xA5FFB5);
         } else {
-            context.drawTextWithShadow(textRenderer, "Companions", startX, 50, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "ID", startX, 86, 0x888888);
-            context.drawTextWithShadow(textRenderer, "Advanced Controls", startX, 122, 0xA5FFB5);
-            ScreenLayout.drawWrapped(context, textRenderer, "This page is for companion editing and rule identity only.", startX, 150, panelWidth, 0xAAAAAA);
+            int topY = contentTopY();
+            int rowH = compactRowH();
+            context.drawTextWithShadow(textRenderer, "Companions", startX, topY - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "ID", startX, topY + rowH - 6, 0x888888);
+            context.drawTextWithShadow(textRenderer, "Despawn When Zone Inactive", startX, topY + rowH * 2 - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Announce On Spawn", startX, topY + rowH * 3 - 6, 0xA5FFB5);
+            if (height >= 240) {
+                ScreenLayout.drawWrapped(context, textRenderer, "This page is for companion editing and rule identity only.", startX, topY + rowH * 4 + 4, panelWidth, 0xAAAAAA);
+            }
         }
 
         if (!error.isBlank()) {
@@ -356,6 +483,14 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
         r.boundaryMaxOutsideSeconds = src.boundaryMaxOutsideSeconds;
         r.boundaryCheckIntervalTicks = src.boundaryCheckIntervalTicks;
         r.boundaryTeleportBack = src.boundaryTeleportBack;
+        r.spawnMode = src.spawnMode;
+        r.fixedX = src.fixedX;
+        r.fixedY = src.fixedY;
+        r.fixedZ = src.fixedZ;
+        r.allowSmallRoom = src.allowSmallRoom;
+        r.positionAttempts = src.positionAttempts;
+        r.minDistanceBetweenSpawns = src.minDistanceBetweenSpawns;
+        r.spreadSpawns = src.spreadSpawns;
         r.boundaryModeWasInvalid = src.boundaryModeWasInvalid;
         r.companions = src.companions == null ? new ArrayList<>() : new ArrayList<>(src.companions);
         return r;

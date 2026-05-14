@@ -5,6 +5,8 @@ import com.gerbarium.regions.model.Zone;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.network.ServerPlayerEntity;
 
+import java.lang.reflect.Method;
+
 public final class WorldEditSelectionReader {
     private WorldEditSelectionReader() {
     }
@@ -48,10 +50,8 @@ public final class WorldEditSelectionReader {
                 .getConstructor(classFor("com.sk89q.worldedit.world.World"), classFor("com.sk89q.worldedit.math.BlockVector3"), classFor("com.sk89q.worldedit.math.BlockVector3"))
                 .newInstance(world, min, max);
 
-        invoke(localSession, "setRegionSelector",
-                new Class<?>[]{classFor("com.sk89q.worldedit.world.World"), classFor("com.sk89q.worldedit.regions.selector.RegionSelector")},
-                new Object[]{world, selector});
         invoke(selector, "learnChanges");
+        setRegionSelector(localSession, world, selector);
         invoke(localSession, "dispatchCUISelection", new Class<?>[]{classFor("com.sk89q.worldedit.entity.Player")}, new Object[]{worldEditPlayer});
     }
 
@@ -64,9 +64,7 @@ public final class WorldEditSelectionReader {
                 .getConstructor(classFor("com.sk89q.worldedit.world.World"))
                 .newInstance(world);
 
-        invoke(localSession, "setRegionSelector",
-                new Class<?>[]{classFor("com.sk89q.worldedit.world.World"), classFor("com.sk89q.worldedit.regions.selector.RegionSelector")},
-                new Object[]{world, selector});
+        setRegionSelector(localSession, world, selector);
         invoke(localSession, "dispatchCUISelection", new Class<?>[]{classFor("com.sk89q.worldedit.entity.Player")}, new Object[]{worldEditPlayer});
     }
 
@@ -78,7 +76,15 @@ public final class WorldEditSelectionReader {
     private static Object getLocalSession(Object worldEditPlayer) throws Exception {
         Object worldEdit = invokeStatic("com.sk89q.worldedit.WorldEdit", "getInstance", new Class<?>[0], new Object[0]);
         Object sessionManager = invoke(worldEdit, "getSessionManager");
-        return invoke(sessionManager, "get", new Class<?>[]{classFor("com.sk89q.worldedit.entity.Player")}, new Object[]{worldEditPlayer});
+        try {
+            return invoke(sessionManager, "get", new Class<?>[]{classFor("com.sk89q.worldedit.extension.platform.Actor")}, new Object[]{worldEditPlayer});
+        } catch (NoSuchMethodException ignoredActor) {
+            try {
+                return invoke(sessionManager, "get", new Class<?>[]{classFor("com.sk89q.worldedit.session.SessionOwner")}, new Object[]{worldEditPlayer});
+            } catch (NoSuchMethodException ignoredOwner) {
+                return invokeCompatible(sessionManager, "get", worldEditPlayer);
+            }
+        }
     }
 
     private static Class<?> classFor(String fqcn) throws ClassNotFoundException {
@@ -91,6 +97,61 @@ public final class WorldEditSelectionReader {
 
     private static Object invoke(Object target, String method, Class<?>[] argTypes, Object[] args) throws Exception {
         return target.getClass().getMethod(method, argTypes).invoke(target, args);
+    }
+
+    private static Object invokeCompatible(Object target, String method, Object arg) throws Exception {
+        Method fallback = null;
+        for (Method candidate : target.getClass().getMethods()) {
+            if (!candidate.getName().equals(method) || candidate.getParameterCount() != 1) {
+                continue;
+            }
+            Class<?> param = candidate.getParameterTypes()[0];
+            if (arg == null || param.isInstance(arg) || param.isAssignableFrom(arg.getClass())) {
+                return candidate.invoke(target, arg);
+            }
+            fallback = candidate;
+        }
+        if (fallback != null) {
+            return fallback.invoke(target, arg);
+        }
+        throw new NoSuchMethodException(method + "(compatible)");
+    }
+
+    private static void setRegionSelector(Object localSession, Object world, Object selector) throws Exception {
+        try {
+            invoke(localSession, "setRegionSelector",
+                    new Class<?>[]{classFor("com.sk89q.worldedit.world.World"), classFor("com.sk89q.worldedit.regions.selector.RegionSelector")},
+                    new Object[]{world, selector});
+            return;
+        } catch (NoSuchMethodException ignored) {
+            invokeCompatibleByArgs(localSession, "setRegionSelector", world, selector);
+        }
+    }
+
+    private static Object invokeCompatibleByArgs(Object target, String method, Object... args) throws Exception {
+        Method fallback = null;
+        for (Method candidate : target.getClass().getMethods()) {
+            if (!candidate.getName().equals(method) || candidate.getParameterCount() != args.length) {
+                continue;
+            }
+            Class<?>[] params = candidate.getParameterTypes();
+            boolean compatible = true;
+            for (int i = 0; i < params.length; i++) {
+                Object arg = args[i];
+                if (arg != null && !params[i].isInstance(arg) && !params[i].isAssignableFrom(arg.getClass())) {
+                    compatible = false;
+                    break;
+                }
+            }
+            if (compatible) {
+                return candidate.invoke(target, args);
+            }
+            fallback = candidate;
+        }
+        if (fallback != null) {
+            return fallback.invoke(target, args);
+        }
+        throw new NoSuchMethodException(method + "(compatible args)");
     }
 
     private static Object invokeStatic(String className, String method, Class<?>[] argTypes, Object[] args) throws Exception {

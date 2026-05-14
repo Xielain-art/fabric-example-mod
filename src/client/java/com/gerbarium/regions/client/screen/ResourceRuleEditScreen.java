@@ -81,7 +81,7 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
 
         int panelWidth = ScreenLayout.panelWidth(width, 700);
         int startX = ScreenLayout.panelLeft(width, panelWidth);
-        int topY = 56;
+        int topY = contentTopY();
 
         addPageNav(startX, panelWidth);
 
@@ -218,7 +218,7 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
 
     private void addLimitsPage(int startX, int topY, int panelWidth) {
         int half = (panelWidth - 10) / 2;
-        int rowH = 36;
+        int rowH = compactRowH();
 
         maxActiveField = field(startX, topY, half, String.valueOf(draft.maxActiveBlocks));
         spawnCountField = field(startX + half + 10, topY, half, String.valueOf(draft.spawnCount));
@@ -235,27 +235,33 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
         addDrawableChild(minYField);
         addDrawableChild(maxYField);
 
-        replaceModeButton = addDrawableChild(CyclingButtonWidget.<ReplaceMode>builder(v -> Text.literal(v.name()))
-                .values(List.of(ReplaceMode.ONLY_TARGET_BLOCKS, ReplaceMode.AIR_OR_REPLACEABLE, ReplaceMode.TARGET_BLOCKS_OR_AIR))
-                .initially(draft.replaceMode)
-                .build(startX, topY + rowH * 3, 240, 20, Text.literal("Replace Mode"), (b, v) -> {}));
+        int spacingY = height < 220 ? topY + rowH * 3 : topY + rowH * 5 - 6;
+        int replaceY = topY + rowH * 3;
+        int modeY = topY + rowH * 4;
 
-        restoreModeButton = addDrawableChild(CyclingButtonWidget.<RestoreMode>builder(v -> Text.literal(v.name()))
-                .values(List.of(RestoreMode.RESTORE_ORIGINAL))
-                .initially(draft.restoreMode)
-                .build(startX, topY + rowH * 4, 240, 20, Text.literal("Restore Mode"), (b, v) -> {}));
-
-        placementModeButton = addDrawableChild(CyclingButtonWidget.<PlacementMode>builder(v -> Text.literal(v.name()))
-                .values(List.of(PlacementMode.RANDOM_SCATTER))
-                .initially(draft.placementMode)
-                .build(startX + half + 10, topY + rowH * 4, 240, 20, Text.literal("Placement Mode"), (b, v) -> {}));
-
-        minDistanceField = field(startX, topY + rowH * 5, half, String.valueOf(draft.minDistanceBetweenResources));
+        minDistanceField = field(startX, spacingY, half, String.valueOf(draft.minDistanceBetweenResources));
         addDrawableChild(minDistanceField);
+
+        if (height >= 220) {
+            replaceModeButton = addDrawableChild(CyclingButtonWidget.<ReplaceMode>builder(v -> Text.literal(v.name()))
+                    .values(List.of(ReplaceMode.ONLY_TARGET_BLOCKS, ReplaceMode.AIR_OR_REPLACEABLE, ReplaceMode.TARGET_BLOCKS_OR_AIR))
+                    .initially(draft.replaceMode)
+                    .build(startX, replaceY, 240, 20, Text.literal("Replace Mode"), (b, v) -> {}));
+
+            restoreModeButton = addDrawableChild(CyclingButtonWidget.<RestoreMode>builder(v -> Text.literal(v.name()))
+                    .values(List.of(RestoreMode.RESTORE_ORIGINAL))
+                    .initially(draft.restoreMode)
+                    .build(startX, modeY, 240, 20, Text.literal("Restore Mode"), (b, v) -> {}));
+
+            placementModeButton = addDrawableChild(CyclingButtonWidget.<PlacementMode>builder(v -> Text.literal(v.name()))
+                    .values(List.of(PlacementMode.RANDOM_SCATTER))
+                    .initially(draft.placementMode)
+                    .build(startX + half + 10, modeY, 240, 20, Text.literal("Placement Mode"), (b, v) -> {}));
+        }
     }
 
     private void addSafetyPage(int startX, int topY, int panelWidth) {
-        int rowH = 32;
+        int rowH = compactRowH();
 
         restoreDelayField = field(startX, topY, 180, String.valueOf(draft.restoreDelaySeconds));
         maxAttemptsField = field(startX + 200, topY, 180, String.valueOf(draft.maxPositionAttempts));
@@ -275,6 +281,14 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
                 .build(startX, toggleY + rowH * 4, 220, 20, Text.literal("Prevent Player Placed Blocks"), (b, v) -> {}));
         allowBlockEntitiesButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.allowBlockEntities)
                 .build(startX, toggleY + rowH * 5, 220, 20, Text.literal("Allow Block Entities"), (b, v) -> {}));
+    }
+
+    private int contentTopY() {
+        return height < 220 ? 48 : 56;
+    }
+
+    private int compactRowH() {
+        return height < 220 ? 24 : 32;
     }
 
     private TextFieldWidget field(int x, int y, int w, String value) {
@@ -398,14 +412,19 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
             ScreenLayout.drawWrapped(context, textRenderer, sb.length() == 0 ? "(none)" : sb.toString(), startX, 111, panelWidth, 0xCCCCCC);
         } else if (page == 3) {
             int half = (panelWidth - 10) / 2;
-            context.drawTextWithShadow(textRenderer, "Max Active Blocks", startX, 50, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Spawn Count", startX + half + 10, 50, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Respawn Seconds", startX, 86, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Chance (0..1)", startX + half + 10, 86, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Min Y (blank = zone min)", startX, 122, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Max Y (blank = zone max)", startX + half + 10, 122, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Spacing", startX, 230, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "RANDOM_SCATTER, min distance between resources.", startX, 254, 0xAAAAAA);
+            int topY = contentTopY();
+            int rowH = compactRowH();
+            context.drawTextWithShadow(textRenderer, "Max Active Blocks", startX, topY - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Spawn Count", startX + half + 10, topY - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Respawn Seconds", startX, topY + rowH - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Chance (0..1)", startX + half + 10, topY + rowH - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Min Y (blank = zone min)", startX, topY + rowH * 2 - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Max Y (blank = zone max)", startX + half + 10, topY + rowH * 2 - 6, 0xA5FFB5);
+            int spacingLabelY = height < 220 ? topY + rowH * 3 - 6 : topY + rowH * 5 - 12;
+            context.drawTextWithShadow(textRenderer, "Spacing", startX, spacingLabelY, 0xA5FFB5);
+            if (height >= 240) {
+                context.drawTextWithShadow(textRenderer, "RANDOM_SCATTER, min distance between resources.", startX, topY + rowH * 5 + 18, 0xAAAAAA);
+            }
         } else if (page == 4) {
             context.drawTextWithShadow(textRenderer, "Restore Delay Seconds", startX, 50, 0xA5FFB5);
             context.drawTextWithShadow(textRenderer, "Max Position Attempts", startX + 200, 50, 0xA5FFB5);

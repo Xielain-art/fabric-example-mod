@@ -91,6 +91,7 @@ public final class ZoneDefaults {
                 rule.failedSpawnRetrySeconds = 60;
             }
             normalizeBoundaryFields(rule, true);
+            normalizeSpawnPlacementFields(rule, true);
             return;
         }
 
@@ -117,6 +118,7 @@ public final class ZoneDefaults {
             rule.failedSpawnRetrySeconds = 60;
         }
         normalizeBoundaryFields(rule, false);
+        normalizeSpawnPlacementFields(rule, false);
     }
 
     public static void validateZone(Zone zone) {
@@ -214,6 +216,19 @@ public final class ZoneDefaults {
         if (rule.boundaryCheckIntervalTicks < 20) {
             throw new IllegalArgumentException("boundaryCheckIntervalTicks must be >= 20");
         }
+        if (!isValidSpawnMode(rule.spawnMode)) {
+            throw new IllegalArgumentException("spawnMode must be one of RANDOM_VALID_POSITION, CENTER, NEAR_CENTER, FIXED_POINT, PLAYER_NEARBY, BOSS_ROOM");
+        }
+        if (MobRule.SPAWN_MODE_FIXED_POINT.equals(rule.spawnMode)
+                && (rule.fixedX == null || rule.fixedY == null || rule.fixedZ == null)) {
+            throw new IllegalArgumentException("fixedX, fixedY and fixedZ are required for FIXED_POINT spawnMode");
+        }
+        if (rule.positionAttempts < 1) {
+            throw new IllegalArgumentException("positionAttempts must be >= 1");
+        }
+        if (rule.minDistanceBetweenSpawns < 0) {
+            throw new IllegalArgumentException("minDistanceBetweenSpawns must be >= 0");
+        }
         if (rule.companions == null) {
             rule.companions = new ArrayList<>();
         }
@@ -271,6 +286,15 @@ public final class ZoneDefaults {
                 || MobRule.BOUNDARY_LEASH.equals(mode)
                 || MobRule.BOUNDARY_TELEPORT_BACK.equals(mode)
                 || MobRule.BOUNDARY_REMOVE_OUTSIDE.equals(mode);
+    }
+
+    public static boolean isValidSpawnMode(String mode) {
+        return MobRule.SPAWN_MODE_RANDOM_VALID_POSITION.equals(mode)
+                || MobRule.SPAWN_MODE_CENTER.equals(mode)
+                || MobRule.SPAWN_MODE_NEAR_CENTER.equals(mode)
+                || MobRule.SPAWN_MODE_FIXED_POINT.equals(mode)
+                || MobRule.SPAWN_MODE_PLAYER_NEARBY.equals(mode)
+                || MobRule.SPAWN_MODE_BOSS_ROOM.equals(mode);
     }
 
     public static String defaultBoundaryModeFor(SpawnType spawnType) {
@@ -420,6 +444,27 @@ public final class ZoneDefaults {
         }
         if (rule.boundaryCheckIntervalTicks < 20) {
             rule.boundaryCheckIntervalTicks = DEFAULT_BOUNDARY_CHECK_INTERVAL_TICKS;
+        }
+    }
+
+    private static void normalizeSpawnPlacementFields(MobRule rule, boolean uniqueDefaults) {
+        if (!isValidSpawnMode(rule.spawnMode)) {
+            rule.spawnMode = uniqueDefaults ? MobRule.SPAWN_MODE_BOSS_ROOM : MobRule.SPAWN_MODE_RANDOM_VALID_POSITION;
+        }
+        if (MobRule.SPAWN_MODE_BOSS_ROOM.equals(rule.spawnMode)) {
+            rule.allowSmallRoom = true;
+            if (rule.maxAlive < 1) {
+                rule.maxAlive = 1;
+            }
+            if (rule.spawnCount < 1) {
+                rule.spawnCount = 1;
+            }
+        }
+        if (rule.positionAttempts < 1) {
+            rule.positionAttempts = 128;
+        }
+        if (rule.minDistanceBetweenSpawns < 0) {
+            rule.minDistanceBetweenSpawns = 2;
         }
     }
 
