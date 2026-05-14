@@ -75,10 +75,10 @@ public final class ZoneDefaults {
             if (rule.cooldownStart == null) {
                 rule.cooldownStart = CooldownStart.AFTER_DEATH;
             }
-            if (rule.maxAlive < 0) {
+            if (rule.maxAlive < 1) {
                 rule.maxAlive = 1;
             }
-            if (rule.spawnCount < 0) {
+            if (rule.spawnCount < 1) {
                 rule.spawnCount = 1;
             }
             if (rule.respawnSeconds < 1) {
@@ -100,10 +100,10 @@ public final class ZoneDefaults {
         if (rule.cooldownStart == null) {
             rule.cooldownStart = CooldownStart.AFTER_ACTIVATION;
         }
-        if (rule.maxAlive < 0) {
+        if (rule.maxAlive < 1) {
             rule.maxAlive = 10;
         }
-        if (rule.spawnCount < 0) {
+        if (rule.spawnCount < 1) {
             rule.spawnCount = 4;
         }
         if (rule.respawnSeconds < 1) {
@@ -190,8 +190,11 @@ public final class ZoneDefaults {
         if (rule.spawnType == SpawnType.UNIQUE && rule.refillMode != RefillMode.AFTER_DEATH) {
             throw new IllegalArgumentException("UNIQUE supports AFTER_DEATH refillMode");
         }
-        if (rule.maxAlive < 0 || rule.spawnCount < 0 || rule.respawnSeconds < 1) {
-            throw new IllegalArgumentException("maxAlive/spawnCount must be >= 0 and respawnSeconds must be >= 1");
+        if (rule.maxAlive <= 0 || rule.spawnCount <= 0) {
+            throw new IllegalArgumentException("maxAlive and spawnCount must be > 0");
+        }
+        if (rule.respawnSeconds < 1) {
+            throw new IllegalArgumentException("respawnSeconds must be >= 1");
         }
         if (rule.chance < 0.0 || rule.chance > 1.0) {
             throw new IllegalArgumentException("chance must be 0..1");
@@ -287,10 +290,10 @@ public final class ZoneDefaults {
         if (rule.resourceBlocks == null) {
             rule.resourceBlocks = new ArrayList<>();
         }
-        if (rule.maxActiveBlocks < 0) {
+        if (rule.maxActiveBlocks < 1) {
             rule.maxActiveBlocks = 12;
         }
-        if (rule.spawnCount < 0) {
+        if (rule.spawnCount < 1) {
             rule.spawnCount = 3;
         }
         if (rule.respawnSeconds < 1) {
@@ -351,11 +354,11 @@ public final class ZoneDefaults {
                 throw new IllegalArgumentException("resourceBlocks weight must be >= 1");
             }
         }
-        if (rule.maxActiveBlocks < 0) {
-            throw new IllegalArgumentException("maxActiveBlocks must be >= 0");
+        if (rule.maxActiveBlocks <= 0) {
+            throw new IllegalArgumentException("maxActiveBlocks must be > 0");
         }
-        if (rule.spawnCount < 0) {
-            throw new IllegalArgumentException("spawnCount must be >= 0");
+        if (rule.spawnCount <= 0) {
+            throw new IllegalArgumentException("spawnCount must be > 0");
         }
         if (rule.respawnSeconds < 1) {
             throw new IllegalArgumentException("respawnSeconds must be >= 1");
@@ -399,7 +402,7 @@ public final class ZoneDefaults {
                 if (!isIdentifierLike(tb)) {
                     throw new IllegalArgumentException("targetBlocks entry must be namespace:path: " + tb);
                 }
-                if (!targetSet.add(tb.toLowerCase())) {
+                if (!targetSet.add(tb.toLowerCase(Locale.ROOT))) {
                     throw new IllegalArgumentException("Duplicate targetBlock: " + tb);
                 }
             }
