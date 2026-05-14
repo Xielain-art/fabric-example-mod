@@ -57,7 +57,6 @@ public final class ZoneCommand {
                 .then(ZoneMobCommand.buildMobRoot(storage))
                 .then(ZoneResourceCommand.buildResourceRoot(storage))
                 .then(ZoneSettingsCommand.build(storage))
-                .then(ZoneClearCommand.build(storage))
 
                 .then(literal("delete")
                         .then(argument("id", StringArgumentType.word())

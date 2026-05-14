@@ -37,7 +37,7 @@ public class GerbariumRegionsBridge implements ModInitializer {
         LOGGER.info("  Mod ID:      {}", MOD_ID);
         LOGGER.info("  Version:     1.0.0");
         LOGGER.info("  Environment: CLIENT + SERVER");
-        LOGGER.info("  Purpose:     WorldEdit zones + owo admin GUI + future mob spawn rules");
+        LOGGER.info("  Purpose:     Modular zone config editor/admin GUI");
         LOGGER.info("--------------------------------------------------------------------------------");
         LOGGER.info("  Status: LOADED");
         LOGGER.info("================================================================================");

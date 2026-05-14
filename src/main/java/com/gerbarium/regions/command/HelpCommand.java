@@ -42,7 +42,6 @@ public final class HelpCommand {
         CommandFeedback.send(source, "/gerb zone enable <zone>");
         CommandFeedback.send(source, "/gerb zone disable <zone>");
         CommandFeedback.send(source, "/gerb zone mob - show mob rule commands");
-        CommandFeedback.send(source, "/gerb zone clear <zone>");
         CommandFeedback.send(source, "/gerb zone reload");
     }
 
@@ -65,7 +64,10 @@ public final class HelpCommand {
         CommandFeedback.send(source, "/gerb zone mob companion remove <zone> <ruleName> <companionName>");
         CommandFeedback.send(source, "/gerb zone mob companion list <zone> <ruleName>");
         CommandFeedback.send(source, "/gerb zone mob companion info <zone> <ruleName> <companionName>");
-        CommandFeedback.send(source, "/gerb zone clear <zone> - remove mobs tagged as gerb_zone_<zone>");
+        CommandFeedback.send(source, "/gerb zone resource list <zone>");
+        CommandFeedback.send(source, "/gerb zone resource info <zone> <ruleName>");
+        CommandFeedback.send(source, "/gerb zone resource remove <zone> <ruleName>");
+        CommandFeedback.send(source, "Resource creation/editing is GUI-only.");
         CommandFeedback.send(source, "/gerb zone reload - reload zone config files");
         CommandFeedback.send(source, "UI uses rule names; rule ids are shown in advanced/view mode.");
     }

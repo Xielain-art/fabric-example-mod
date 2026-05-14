@@ -28,6 +28,7 @@ public final class GerbariumClientNetworking {
 
             client.execute(() -> {
                 requestEntities();
+                requestBlocks();
                 requestZones();
             });
         });
@@ -51,6 +52,17 @@ public final class GerbariumClientNetworking {
 
             client.execute(() -> ClientGerbariumData.setEntityIds(ids));
         });
+
+        ClientPlayNetworking.registerGlobalReceiver(GerbariumPackets.SYNC_BLOCKS, (client, handler, buf, responseSender) -> {
+            int count = buf.readVarInt();
+            List<String> ids = new ArrayList<>();
+
+            for (int i = 0; i < count; i++) {
+                ids.add(buf.readString(512));
+            }
+
+            client.execute(() -> ClientGerbariumData.setBlockIds(ids));
+        });
     }
 
     public static void requestZones() {
@@ -59,6 +71,10 @@ public final class GerbariumClientNetworking {
 
     public static void requestEntities() {
         ClientPlayNetworking.send(GerbariumPackets.REQUEST_ENTITIES, PacketByteBufs.empty());
+    }
+
+    public static void requestBlocks() {
+        ClientPlayNetworking.send(GerbariumPackets.REQUEST_BLOCKS, PacketByteBufs.empty());
     }
 
     public static void addMobRule(String zoneId, MobRule rule) {

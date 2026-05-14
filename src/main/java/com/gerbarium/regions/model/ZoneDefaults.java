@@ -3,6 +3,7 @@ package com.gerbarium.regions.model;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 public final class ZoneDefaults {
@@ -22,6 +23,9 @@ public final class ZoneDefaults {
     }
 
     public static void normalizeZone(Zone zone) {
+        if (zone.version <= 0) {
+            zone.version = 1;
+        }
         if (zone.name == null || zone.name.isBlank()) {
             zone.name = zone.id;
         }
@@ -71,10 +75,10 @@ public final class ZoneDefaults {
             if (rule.cooldownStart == null) {
                 rule.cooldownStart = CooldownStart.AFTER_DEATH;
             }
-            if (rule.maxAlive < 1) {
+            if (rule.maxAlive < 0) {
                 rule.maxAlive = 1;
             }
-            if (rule.spawnCount < 1) {
+            if (rule.spawnCount < 0) {
                 rule.spawnCount = 1;
             }
             if (rule.respawnSeconds < 1) {
@@ -83,7 +87,7 @@ public final class ZoneDefaults {
             if (rule.chance < 0.0 || rule.chance > 1.0) {
                 rule.chance = 1.0;
             }
-            if (rule.failedSpawnRetrySeconds < 1) {
+            if (rule.failedSpawnRetrySeconds < 0) {
                 rule.failedSpawnRetrySeconds = 60;
             }
             normalizeBoundaryFields(rule, true);
@@ -96,10 +100,10 @@ public final class ZoneDefaults {
         if (rule.cooldownStart == null) {
             rule.cooldownStart = CooldownStart.AFTER_ACTIVATION;
         }
-        if (rule.maxAlive < 1) {
+        if (rule.maxAlive < 0) {
             rule.maxAlive = 10;
         }
-        if (rule.spawnCount < 1) {
+        if (rule.spawnCount < 0) {
             rule.spawnCount = 4;
         }
         if (rule.respawnSeconds < 1) {
@@ -109,7 +113,7 @@ public final class ZoneDefaults {
             rule.chance = 1.0;
         }
         rule.spawnWhenReady = true;
-        if (rule.failedSpawnRetrySeconds < 1) {
+        if (rule.failedSpawnRetrySeconds < 0) {
             rule.failedSpawnRetrySeconds = 60;
         }
         normalizeBoundaryFields(rule, false);
@@ -144,13 +148,23 @@ public final class ZoneDefaults {
         if (zone.spawn.maxPositionAttempts <= 0) {
             throw new IllegalArgumentException("spawn.maxPositionAttempts must be > 0");
         }
+        HashSet<String> mobIds = new HashSet<>();
         for (MobRule mob : zone.mobs) {
             validateMobRule(mob);
             normalizeMobRule(mob);
+            String id = mob.id.toLowerCase(Locale.ROOT);
+            if (!mobIds.add(id)) {
+                throw new IllegalArgumentException("Mob rule id must be unique: " + mob.id);
+            }
         }
+        HashSet<String> resourceIds = new HashSet<>();
         for (ResourceRule res : zone.resources) {
             validateResourceRule(res);
             normalizeResourceRule(res);
+            String id = res.id.toLowerCase(Locale.ROOT);
+            if (!resourceIds.add(id)) {
+                throw new IllegalArgumentException("Resource rule id must be unique: " + res.id);
+            }
         }
     }
 
@@ -170,14 +184,23 @@ public final class ZoneDefaults {
         if (rule.refillMode == null) {
             throw new IllegalArgumentException("Rule refillMode cannot be empty");
         }
-        if (rule.maxAlive < 1 || rule.spawnCount < 1 || rule.respawnSeconds < 1) {
-            throw new IllegalArgumentException("maxAlive/spawnCount/respawnSeconds must be >= 1");
+        if (rule.spawnType == SpawnType.PACK && rule.refillMode == RefillMode.AFTER_DEATH) {
+            throw new IllegalArgumentException("PACK supports ON_ACTIVATION or TIMED refillMode");
+        }
+        if (rule.spawnType == SpawnType.UNIQUE && rule.refillMode != RefillMode.AFTER_DEATH) {
+            throw new IllegalArgumentException("UNIQUE supports AFTER_DEATH refillMode");
+        }
+        if (rule.maxAlive < 0 || rule.spawnCount < 0 || rule.respawnSeconds < 1) {
+            throw new IllegalArgumentException("maxAlive/spawnCount must be >= 0 and respawnSeconds must be >= 1");
         }
         if (rule.chance < 0.0 || rule.chance > 1.0) {
             throw new IllegalArgumentException("chance must be 0..1");
         }
-        if (rule.failedSpawnRetrySeconds < 1) {
-            throw new IllegalArgumentException("failedSpawnRetrySeconds must be >= 1");
+        if (rule.failedSpawnRetrySeconds < 0) {
+            throw new IllegalArgumentException("failedSpawnRetrySeconds must be >= 0");
+        }
+        if (rule.timedMaxSpawnsPerActivation != null && rule.timedMaxSpawnsPerActivation < -1) {
+            throw new IllegalArgumentException("timedMaxSpawnsPerActivation must be null, -1, or >= 0");
         }
         if (!isValidBoundaryMode(rule.boundaryMode)) {
             throw new IllegalArgumentException("boundaryMode must be one of NONE, LEASH, TELEPORT_BACK, REMOVE_OUTSIDE");
@@ -208,10 +231,10 @@ public final class ZoneDefaults {
         if (rule.name == null || rule.name.isBlank()) {
             rule.name = rule.id;
         }
-        if (rule.count < 1) {
-            rule.count = 1;
+        if (rule.count < 0) {
+            rule.count = 0;
         }
-        if (rule.radius < 1) {
+        if (rule.radius < 0) {
             rule.radius = 8;
         }
         if (rule.chance < 0.0 || rule.chance > 1.0) {
@@ -229,11 +252,11 @@ public final class ZoneDefaults {
         if (rule.entity == null || rule.entity.isBlank()) {
             throw new IllegalArgumentException("Companion entity cannot be empty");
         }
-        if (rule.count < 1) {
-            throw new IllegalArgumentException("Companion count must be >= 1");
+        if (rule.count < 0) {
+            throw new IllegalArgumentException("Companion count must be >= 0");
         }
-        if (rule.radius < 1) {
-            throw new IllegalArgumentException("Companion radius must be >= 1");
+        if (rule.radius < 0) {
+            throw new IllegalArgumentException("Companion radius must be >= 0");
         }
         if (rule.chance < 0.0 || rule.chance > 1.0) {
             throw new IllegalArgumentException("Companion chance must be 0..1");
@@ -291,11 +314,6 @@ public final class ZoneDefaults {
         if (rule.maxPositionAttempts < 1) {
             rule.maxPositionAttempts = 64;
         }
-        if (rule.minY > rule.maxY) {
-            int tmp = rule.minY;
-            rule.minY = rule.maxY;
-            rule.maxY = tmp;
-        }
         if (rule.placementMode == null) {
             rule.placementMode = PlacementMode.RANDOM_SCATTER;
         }
@@ -326,12 +344,12 @@ public final class ZoneDefaults {
             if (wb.block == null || wb.block.isBlank()) {
                 throw new IllegalArgumentException("resourceBlocks entry block cannot be empty");
             }
+            if (!isIdentifierLike(wb.block)) {
+                throw new IllegalArgumentException("resourceBlocks entry block must be namespace:path: " + wb.block);
+            }
             if (wb.weight < 1) {
                 throw new IllegalArgumentException("resourceBlocks weight must be >= 1");
             }
-        }
-        if (rule.replaceMode == ReplaceMode.ONLY_TARGET_BLOCKS && (rule.targetBlocks == null || rule.targetBlocks.isEmpty())) {
-            throw new IllegalArgumentException("targetBlocks cannot be empty when replaceMode is ONLY_TARGET_BLOCKS");
         }
         if (rule.maxActiveBlocks < 0) {
             throw new IllegalArgumentException("maxActiveBlocks must be >= 0");
@@ -357,17 +375,29 @@ public final class ZoneDefaults {
         if (rule.replaceMode == null) {
             throw new IllegalArgumentException("replaceMode cannot be empty");
         }
+        if (rule.replaceMode == ReplaceMode.ONLY_TARGET_BLOCKS && (rule.targetBlocks == null || rule.targetBlocks.isEmpty())) {
+            throw new IllegalArgumentException("targetBlocks cannot be empty when replaceMode is ONLY_TARGET_BLOCKS");
+        }
         if (rule.restoreMode == null) {
             throw new IllegalArgumentException("restoreMode cannot be empty");
         }
         if (rule.activationMode == null) {
             throw new IllegalArgumentException("activationMode cannot be empty");
         }
+        if (rule.placementMode == null) {
+            throw new IllegalArgumentException("placementMode cannot be empty");
+        }
+        if (rule.minDistanceBetweenResources < 0) {
+            throw new IllegalArgumentException("minDistanceBetweenResources must be >= 0");
+        }
         HashSet<String> targetSet = new HashSet<>();
         if (rule.targetBlocks != null) {
             for (String tb : rule.targetBlocks) {
                 if (tb == null || tb.isBlank()) {
                     throw new IllegalArgumentException("targetBlocks entry cannot be empty");
+                }
+                if (!isIdentifierLike(tb)) {
+                    throw new IllegalArgumentException("targetBlocks entry must be namespace:path: " + tb);
                 }
                 if (!targetSet.add(tb.toLowerCase())) {
                     throw new IllegalArgumentException("Duplicate targetBlock: " + tb);
@@ -388,5 +418,9 @@ public final class ZoneDefaults {
         if (rule.boundaryCheckIntervalTicks < 20) {
             rule.boundaryCheckIntervalTicks = DEFAULT_BOUNDARY_CHECK_INTERVAL_TICKS;
         }
+    }
+
+    private static boolean isIdentifierLike(String id) {
+        return id != null && id.matches("^[a-z0-9_.-]+:[a-z0-9_./-]+$");
     }
 }

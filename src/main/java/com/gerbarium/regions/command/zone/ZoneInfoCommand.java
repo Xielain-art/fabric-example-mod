@@ -39,6 +39,7 @@ public final class ZoneInfoCommand {
                             CommandFeedback.send(context.getSource(), "Min: " + zone.min.x + " " + zone.min.y + " " + zone.min.z);
                             CommandFeedback.send(context.getSource(), "Max: " + zone.max.x + " " + zone.max.y + " " + zone.max.z);
                             CommandFeedback.send(context.getSource(), "Mobs: " + zone.mobs.size());
+                            CommandFeedback.send(context.getSource(), "Resources: " + zone.resources.size());
                             CommandFeedback.send(context.getSource(), "Activation range=" + zone.activation.range + ", deactivateAfter=" + zone.activation.deactivateAfterSeconds + "s");
                             CommandFeedback.send(context.getSource(), "Spawn distance=" + zone.spawn.minDistanceFromPlayer + "-" + zone.spawn.maxDistanceFromPlayer + ", attempts=" + zone.spawn.maxPositionAttempts);
 

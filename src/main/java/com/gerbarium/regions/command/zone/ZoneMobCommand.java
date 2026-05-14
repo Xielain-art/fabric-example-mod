@@ -279,7 +279,7 @@ public final class ZoneMobCommand {
         Optional<MobRule> or = findRule(oz.get(), ruleId);
         if (or.isEmpty()) { CommandFeedback.error(source, "Mob rule not found: " + ruleId); return 0; }
         CompanionRule c = new CompanionRule();
-        c.id = CompanionRule.generateId();
+        c.id = companionId;
         c.name = companionId;
         c.entity = entity;
         c.count = count;

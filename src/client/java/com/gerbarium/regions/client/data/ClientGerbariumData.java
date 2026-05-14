@@ -14,6 +14,7 @@ public final class ClientGerbariumData {
 
     private static ZonesFile zonesFile = new ZonesFile();
     private static List<String> entityIds = new ArrayList<>();
+    private static List<String> blockIds = new ArrayList<>();
 
     private ClientGerbariumData() {
     }
@@ -52,5 +53,13 @@ public final class ClientGerbariumData {
 
     public static void setEntityIds(List<String> ids) {
         entityIds = ids == null ? new ArrayList<>() : ids;
+    }
+
+    public static List<String> blockIds() {
+        return blockIds;
+    }
+
+    public static void setBlockIds(List<String> ids) {
+        blockIds = ids == null ? new ArrayList<>() : ids;
     }
 }

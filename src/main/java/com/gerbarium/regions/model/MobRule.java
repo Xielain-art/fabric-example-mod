@@ -25,6 +25,7 @@ public class MobRule {
     public int failedSpawnRetrySeconds = 60;
     public boolean despawnWhenZoneInactive = false;
     public boolean announceOnSpawn = false;
+    public Integer timedMaxSpawnsPerActivation = null;
     public String boundaryMode = BOUNDARY_LEASH;
     public int boundaryMaxOutsideSeconds = 10;
     public int boundaryCheckIntervalTicks = 40;
@@ -46,8 +47,8 @@ public class MobRule {
 
     public static MobRule packDefaults(String id, String entity) {
         MobRule rule = new MobRule();
-        rule.name = id;
-        rule.id = generateId();
+        rule.id = id == null || id.isBlank() ? generateId() : id;
+        rule.name = displayNameFromId(rule.id);
         rule.entity = entity;
         rule.enabled = true;
         rule.spawnType = SpawnType.PACK;
@@ -70,8 +71,8 @@ public class MobRule {
 
     public static MobRule uniqueDefaults(String id, String entity) {
         MobRule rule = new MobRule();
-        rule.name = id;
-        rule.id = generateId();
+        rule.id = id == null || id.isBlank() ? generateId() : id;
+        rule.name = displayNameFromId(rule.id);
         rule.entity = entity;
         rule.enabled = true;
         rule.spawnType = SpawnType.UNIQUE;
@@ -94,5 +95,26 @@ public class MobRule {
 
     public static String generateId() {
         return String.format("%016x", ThreadLocalRandom.current().nextLong());
+    }
+
+    private static String displayNameFromId(String id) {
+        if (id == null || id.isBlank()) {
+            return "New Mob Rule";
+        }
+        String[] parts = id.replace('-', '_').split("_");
+        StringBuilder name = new StringBuilder();
+        for (String part : parts) {
+            if (part.isBlank()) {
+                continue;
+            }
+            if (name.length() > 0) {
+                name.append(' ');
+            }
+            name.append(Character.toUpperCase(part.charAt(0)));
+            if (part.length() > 1) {
+                name.append(part.substring(1));
+            }
+        }
+        return name.length() == 0 ? id : name.toString();
     }
 }

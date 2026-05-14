@@ -18,7 +18,7 @@ import net.minecraft.text.Text;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ResourceRuleEditScreen extends Screen {
+public class ResourceRuleEditScreen extends Screen implements BlockSelectionConsumer {
     private static final int PAGE_COUNT = 5;
 
     private final String zoneId;
@@ -36,6 +36,9 @@ public class ResourceRuleEditScreen extends Screen {
     private TextFieldWidget addTargetField;
     private TextFieldWidget addResourceBlockField;
     private TextFieldWidget addResourceWeightField;
+    private String targetInput = "minecraft:stone";
+    private String resourceInput = "minecraft:diamond_ore";
+    private String resourceWeightInput = "1";
 
     private TextFieldWidget maxActiveField;
     private TextFieldWidget spawnCountField;
@@ -43,8 +46,10 @@ public class ResourceRuleEditScreen extends Screen {
     private TextFieldWidget chanceField;
     private TextFieldWidget minYField;
     private TextFieldWidget maxYField;
+    private TextFieldWidget minDistanceField;
     private CyclingButtonWidget<ReplaceMode> replaceModeButton;
     private CyclingButtonWidget<RestoreMode> restoreModeButton;
+    private CyclingButtonWidget<PlacementMode> placementModeButton;
 
     private TextFieldWidget restoreDelayField;
     private TextFieldWidget maxAttemptsField;
@@ -54,6 +59,7 @@ public class ResourceRuleEditScreen extends Screen {
     private CyclingButtonWidget<Boolean> restoreIfNotMinedButton;
     private CyclingButtonWidget<Boolean> preventPlayerPlacedButton;
     private CyclingButtonWidget<Boolean> allowBlockEntitiesButton;
+    private BlockPickTarget blockPickTarget = BlockPickTarget.RESOURCE;
 
     public ResourceRuleEditScreen(String zoneId, ResourceRule existingRule, Screen parent) {
         super(Text.literal(existingRule == null ? "Add Resource Rule" : "Edit Resource Rule"));
@@ -143,21 +149,27 @@ public class ResourceRuleEditScreen extends Screen {
     }
 
     private void addTargetBlocksPage(int startX, int topY, int panelWidth) {
-        int half = (panelWidth - 10) / 2;
+        int fieldW = Math.max(160, panelWidth - 172);
         int rowH = 28;
 
-        addTargetField = field(startX, topY, half, "minecraft:stone");
+        addTargetField = field(startX, topY, fieldW, targetInput);
         addDrawableChild(addTargetField);
+        addDrawableChild(ButtonWidget.builder(Text.literal("Pick"), b -> {
+            capture();
+            blockPickTarget = BlockPickTarget.TARGET;
+            client.setScreen(new BlockPickerScreen(this, this, addTargetField.getText()));
+        }).dimensions(startX + fieldW + 6, topY, 54, 20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("Add Target"), b -> {
             String blockId = addTargetField.getText().trim();
             if (!blockId.isEmpty() && blockId.contains(":")) {
                 draft.targetBlocks.add(blockId);
-                addTargetField.setText("");
+                targetInput = "";
+                addTargetField.setText(targetInput);
                 error = "";
             } else {
                 error = "Block ID must be namespace:path format";
             }
-        }).dimensions(startX + half + 10, topY, half, 20).build());
+        }).dimensions(startX + fieldW + 66, topY, 100, 20).build());
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Remove Last Target"), b -> {
             if (!draft.targetBlocks.isEmpty()) {
@@ -167,12 +179,17 @@ public class ResourceRuleEditScreen extends Screen {
     }
 
     private void addResourceBlocksPage(int startX, int topY, int panelWidth) {
-        int half = (panelWidth - 10) / 2;
+        int blockFieldW = Math.max(160, panelWidth - 224);
         int rowH = 28;
 
-        addResourceBlockField = field(startX, topY, half, "minecraft:diamond_ore");
+        addResourceBlockField = field(startX, topY, blockFieldW, resourceInput);
         addDrawableChild(addResourceBlockField);
-        addResourceWeightField = field(startX + half + 10, topY, 60, "1");
+        addDrawableChild(ButtonWidget.builder(Text.literal("Pick"), b -> {
+            capture();
+            blockPickTarget = BlockPickTarget.RESOURCE;
+            client.setScreen(new BlockPickerScreen(this, this, addResourceBlockField.getText()));
+        }).dimensions(startX + blockFieldW + 6, topY, 54, 20).build());
+        addResourceWeightField = field(startX + blockFieldW + 66, topY, 50, resourceWeightInput);
         addDrawableChild(addResourceWeightField);
         addDrawableChild(ButtonWidget.builder(Text.literal("Add"), b -> {
             String blockId = addResourceBlockField.getText().trim();
@@ -182,13 +199,15 @@ public class ResourceRuleEditScreen extends Screen {
                 wb.block = blockId;
                 wb.weight = weight;
                 draft.resourceBlocks.add(wb);
-                addResourceBlockField.setText("");
-                addResourceWeightField.setText("1");
+                resourceInput = "";
+                addResourceBlockField.setText(resourceInput);
+                resourceWeightInput = "1";
+                addResourceWeightField.setText(resourceWeightInput);
                 error = "";
             } else {
                 error = "Block ID must be namespace:path, weight > 0";
             }
-        }).dimensions(startX + half + 76, topY, panelWidth - half - 76, 20).build());
+        }).dimensions(startX + blockFieldW + 122, topY, panelWidth - blockFieldW - 122, 20).build());
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Remove Last Resource"), b -> {
             if (!draft.resourceBlocks.isEmpty()) {
@@ -225,6 +244,14 @@ public class ResourceRuleEditScreen extends Screen {
                 .values(List.of(RestoreMode.RESTORE_ORIGINAL))
                 .initially(draft.restoreMode)
                 .build(startX, topY + rowH * 4, 240, 20, Text.literal("Restore Mode"), (b, v) -> {}));
+
+        placementModeButton = addDrawableChild(CyclingButtonWidget.<PlacementMode>builder(v -> Text.literal(v.name()))
+                .values(List.of(PlacementMode.RANDOM_SCATTER))
+                .initially(draft.placementMode)
+                .build(startX + half + 10, topY + rowH * 4, 240, 20, Text.literal("Placement Mode"), (b, v) -> {}));
+
+        minDistanceField = field(startX, topY + rowH * 5, half, String.valueOf(draft.minDistanceBetweenResources));
+        addDrawableChild(minDistanceField);
     }
 
     private void addSafetyPage(int startX, int topY, int panelWidth) {
@@ -271,6 +298,9 @@ public class ResourceRuleEditScreen extends Screen {
         if (nameField != null) draft.name = nameField.getText().trim();
         if (enabledButton != null) draft.enabled = enabledButton.getValue();
         if (activationModeButton != null) draft.activationMode = activationModeButton.getValue();
+        if (addTargetField != null) targetInput = addTargetField.getText();
+        if (addResourceBlockField != null) resourceInput = addResourceBlockField.getText();
+        if (addResourceWeightField != null) resourceWeightInput = addResourceWeightField.getText();
 
         if (maxActiveField != null) draft.maxActiveBlocks = parseInt(maxActiveField, draft.maxActiveBlocks);
         if (spawnCountField != null) draft.spawnCount = parseInt(spawnCountField, draft.spawnCount);
@@ -280,6 +310,8 @@ public class ResourceRuleEditScreen extends Screen {
         if (maxYField != null) draft.maxY = parseInt(maxYField, draft.maxY);
         if (replaceModeButton != null) draft.replaceMode = replaceModeButton.getValue();
         if (restoreModeButton != null) draft.restoreMode = restoreModeButton.getValue();
+        if (placementModeButton != null) draft.placementMode = placementModeButton.getValue();
+        if (minDistanceField != null) draft.minDistanceBetweenResources = parseInt(minDistanceField, draft.minDistanceBetweenResources);
 
         if (restoreDelayField != null) draft.restoreDelaySeconds = parseInt(restoreDelayField, draft.restoreDelaySeconds);
         if (maxAttemptsField != null) draft.maxPositionAttempts = parseInt(maxAttemptsField, draft.maxPositionAttempts);
@@ -309,6 +341,21 @@ public class ResourceRuleEditScreen extends Screen {
     }
 
     @Override
+    public void onBlockSelected(String blockId) {
+        if (blockPickTarget == BlockPickTarget.TARGET) {
+            targetInput = blockId;
+            if (addTargetField != null) {
+                addTargetField.setText(blockId);
+            }
+            return;
+        }
+        resourceInput = blockId;
+        if (addResourceBlockField != null) {
+            addResourceBlockField.setText(blockId);
+        }
+    }
+
+    @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
 
@@ -327,15 +374,16 @@ public class ResourceRuleEditScreen extends Screen {
         } else if (page == 1) {
             context.drawTextWithShadow(textRenderer, "Target Blocks", startX, 50, 0xA5FFB5);
             String targets = draft.targetBlocks.isEmpty() ? "(none)" : String.join(", ", draft.targetBlocks);
-            ScreenLayout.drawWrapped(context, textRenderer, "Current: " + targets, startX, 111, panelWidth, 0xCCCCCC);
+            ScreenLayout.drawWrapped(context, textRenderer, targets, startX, 111, panelWidth, 0xCCCCCC);
         } else if (page == 2) {
-            context.drawTextWithShadow(textRenderer, "Resource Blocks (block + weight)", startX, 50, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Resource Blocks", startX, 50, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Weight", startX + Math.max(160, panelWidth - 224) + 66, 50, 0xA5FFB5);
             StringBuilder sb = new StringBuilder();
             for (WeightedBlock wb : draft.resourceBlocks) {
                 if (sb.length() > 0) sb.append(", ");
                 sb.append(wb.block).append(" x").append(wb.weight);
             }
-            ScreenLayout.drawWrapped(context, textRenderer, "Current: " + (sb.length() == 0 ? "(none)" : sb.toString()), startX, 111, panelWidth, 0xCCCCCC);
+            ScreenLayout.drawWrapped(context, textRenderer, sb.length() == 0 ? "(none)" : sb.toString(), startX, 111, panelWidth, 0xCCCCCC);
         } else if (page == 3) {
             int half = (panelWidth - 10) / 2;
             context.drawTextWithShadow(textRenderer, "Max Active Blocks", startX, 50, 0xA5FFB5);
@@ -344,6 +392,8 @@ public class ResourceRuleEditScreen extends Screen {
             context.drawTextWithShadow(textRenderer, "Chance (0..1)", startX + half + 10, 86, 0xA5FFB5);
             context.drawTextWithShadow(textRenderer, "Min Y", startX, 122, 0xA5FFB5);
             context.drawTextWithShadow(textRenderer, "Max Y", startX + half + 10, 122, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Spacing", startX, 230, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "RANDOM_SCATTER, min distance between resources.", startX, 254, 0xAAAAAA);
         } else if (page == 4) {
             context.drawTextWithShadow(textRenderer, "Restore Delay Seconds", startX, 50, 0xA5FFB5);
             context.drawTextWithShadow(textRenderer, "Max Position Attempts", startX + 200, 50, 0xA5FFB5);
@@ -391,5 +441,10 @@ public class ResourceRuleEditScreen extends Screen {
         r.placementMode = src.placementMode;
         r.minDistanceBetweenResources = src.minDistanceBetweenResources;
         return r;
+    }
+
+    private enum BlockPickTarget {
+        TARGET,
+        RESOURCE
     }
 }

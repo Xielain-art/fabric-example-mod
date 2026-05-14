@@ -351,6 +351,7 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
         r.failedSpawnRetrySeconds = src.failedSpawnRetrySeconds;
         r.despawnWhenZoneInactive = src.despawnWhenZoneInactive;
         r.announceOnSpawn = src.announceOnSpawn;
+        r.timedMaxSpawnsPerActivation = src.timedMaxSpawnsPerActivation;
         r.boundaryMode = src.boundaryMode;
         r.boundaryMaxOutsideSeconds = src.boundaryMaxOutsideSeconds;
         r.boundaryCheckIntervalTicks = src.boundaryCheckIntervalTicks;

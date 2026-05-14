@@ -27,7 +27,7 @@ public class ZoneRuntimeSettingsScreen extends Screen {
     private String error = "";
 
     public ZoneRuntimeSettingsScreen(String zoneId) {
-        super(Text.literal("Runtime Settings"));
+        super(Text.literal("Zone Settings"));
         this.zoneId = zoneId;
     }
 
@@ -118,7 +118,7 @@ public class ZoneRuntimeSettingsScreen extends Screen {
         int panelBottom = startX + panelWidth;
         ScreenLayout.drawPanel(context, startX, 15, panelWidth, height - 15);
         context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 23, 0xFFFFFF);
-        context.drawTextWithShadow(textRenderer, "Activation / spawn runtime controls", startX, 31, 0xA5FFB5);
+        context.drawTextWithShadow(textRenderer, "Activation + mob spawn config", startX, 31, 0xA5FFB5);
 
         int startY = 60;
         int rowSpacing = 45;

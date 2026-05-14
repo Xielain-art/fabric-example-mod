@@ -54,7 +54,7 @@ public class ZoneDetailsScreen extends Screen {
         addDrawableChild(ButtonWidget.builder(Text.literal("TP"), b -> GerbariumClientNetworking.tpToZone(zoneId))
                 .dimensions(startX + (btnW + gap) * 2, actionY, btnW, 20).build());
         int row2Y = actionY + 24;
-        addDrawableChild(ButtonWidget.builder(Text.literal("Runtime"), b -> client.setScreen(new ZoneRuntimeSettingsScreen(zoneId)))
+        addDrawableChild(ButtonWidget.builder(Text.literal("Settings"), b -> client.setScreen(new ZoneRuntimeSettingsScreen(zoneId)))
                 .dimensions(startX, row2Y, btnW, 20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("Add Rule"), b -> client.setScreen(new MobRuleEditScreen(zoneId, null)))
                 .dimensions(startX + btnW + gap, row2Y, btnW, 20).build());

@@ -82,8 +82,7 @@ public class ZoneResourcesScreen extends Screen {
         // Add Resource button
         int actionY = topY + 24;
         addDrawableChild(ButtonWidget.builder(Text.literal("Add Resource"), b -> {
-            ResourceRule newRule = ResourceRule.defaults(ResourceRule.generateId(), "New Resource");
-            client.setScreen(new ResourceRuleEditScreen(zoneId, newRule, this));
+            client.setScreen(new ResourceRuleEditScreen(zoneId, null, this));
         }).dimensions(startX + panelWidth - 120, actionY, 110, 20).build());
 
         // List

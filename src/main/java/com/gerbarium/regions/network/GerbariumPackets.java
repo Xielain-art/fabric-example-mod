@@ -11,6 +11,8 @@ public final class GerbariumPackets {
 
     public static final Identifier REQUEST_ENTITIES = new Identifier(GerbariumRegionsBridge.MOD_ID, "request_entities");
     public static final Identifier SYNC_ENTITIES = new Identifier(GerbariumRegionsBridge.MOD_ID, "sync_entities");
+    public static final Identifier REQUEST_BLOCKS = new Identifier(GerbariumRegionsBridge.MOD_ID, "request_blocks");
+    public static final Identifier SYNC_BLOCKS = new Identifier(GerbariumRegionsBridge.MOD_ID, "sync_blocks");
 
     public static final Identifier ADD_MOB_RULE = new Identifier(GerbariumRegionsBridge.MOD_ID, "add_mob_rule");
     public static final Identifier REMOVE_MOB_RULE = new Identifier(GerbariumRegionsBridge.MOD_ID, "remove_mob_rule");

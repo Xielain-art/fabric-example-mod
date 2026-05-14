@@ -30,7 +30,8 @@ public final class ZoneListCommand {
                         CommandFeedback.send(context.getSource(), "- " + zone.id
                                 + " [" + (zone.enabled ? "enabled" : "disabled") + "]"
                                 + " dim=" + zone.dimension
-                                + " mobs=" + zone.mobs.size());
+                                + " mobs=" + zone.mobs.size()
+                                + " resources=" + zone.resources.size());
                     }
 
                     return zones.size();

@@ -11,6 +11,7 @@ import com.gerbarium.regions.storage.ZoneStorage;
 import com.gerbarium.regions.worldedit.WorldEditSelectionReader;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.block.Block;
 import net.minecraft.entity.EntityType;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.registry.Registry;
@@ -37,6 +38,7 @@ public final class GerbariumServerNetworking {
     public static void register() {
         registerRequestZones();
         registerRequestEntities();
+        registerRequestBlocks();
         registerAddMobRule();
         registerRemoveMobRule();
         registerUpdateZoneSettings();
@@ -88,6 +90,34 @@ public final class GerbariumServerNetworking {
                 }
 
                 ServerPlayNetworking.send(player, GerbariumPackets.SYNC_ENTITIES, response);
+            });
+        });
+    }
+
+    private static void registerRequestBlocks() {
+        ServerPlayNetworking.registerGlobalReceiver(GerbariumPackets.REQUEST_BLOCKS, (server, player, handler, buf, responseSender) -> {
+            server.execute(() -> {
+                if (!hasAccess(player)) {
+                    return;
+                }
+
+                Registry<Block> registry = server.getRegistryManager().get(RegistryKeys.BLOCK);
+                List<String> ids = new ArrayList<>();
+
+                for (Identifier id : registry.getIds()) {
+                    ids.add(id.toString());
+                }
+
+                ids.sort(Comparator.naturalOrder());
+
+                PacketByteBuf response = PacketByteBufs.create();
+                response.writeVarInt(ids.size());
+
+                for (String id : ids) {
+                    response.writeString(id, 512);
+                }
+
+                ServerPlayNetworking.send(player, GerbariumPackets.SYNC_BLOCKS, response);
             });
         });
     }
