@@ -166,9 +166,10 @@ public class ZoneStorage {
 
             sortZones(loaded);
 
+            GerbariumRegionsBridge.LOGGER.info("[GerbariumBridge] Loaded zones: total={}", loaded.zones.size());
             return loaded;
         } catch (IOException e) {
-            GerbariumRegionsBridge.LOGGER.error("[Gerbarium] Failed to load zones from {}", zonesDir.toAbsolutePath(), e);
+            GerbariumRegionsBridge.LOGGER.error("[GerbariumBridge] Failed to load zones from {}", zonesDir.toAbsolutePath(), e);
 
             ZonesFile fallback = new ZonesFile();
 
@@ -331,6 +332,10 @@ public class ZoneStorage {
         // Write resources.json
         ResourceRulesFile resources = zoneToResourcesFile(zone);
         writeJsonAtomic(zoneDir.resolve("resources.json"), resources);
+
+        int mobRules = zone.mobs == null ? 0 : zone.mobs.size();
+        int resourceRules = zone.resources == null ? 0 : zone.resources.size();
+        GerbariumRegionsBridge.LOGGER.info("[GerbariumBridge] Saved zone={} path={} mobRules={} resourceRules={}", zone.id, zoneDir.toAbsolutePath(), mobRules, resourceRules);
     }
 
     private void writeJsonAtomic(Path target, Object value) throws IOException {

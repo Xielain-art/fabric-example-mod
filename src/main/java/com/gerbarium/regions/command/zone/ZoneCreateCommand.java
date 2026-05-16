@@ -1,5 +1,6 @@
 package com.gerbarium.regions.command.zone;
 
+import com.gerbarium.regions.GerbariumRegionsBridge;
 import com.gerbarium.regions.command.CommandFeedback;
 import com.gerbarium.regions.model.Zone;
 import com.gerbarium.regions.runtime.BridgeRuntimeReloadDispatcher;
@@ -42,6 +43,9 @@ public final class ZoneCreateCommand {
                                 storage.addZone(zone);
                                 storage.reload();
                                 BridgeRuntimeReloadDispatcher.reloadIfPresent();
+
+                                GerbariumRegionsBridge.LOGGER.info("[GerbariumBridge] Created zone={} dimension={} min={},{},{} max={},{},{}",
+                                        id, zone.dimension, zone.min.x, zone.min.y, zone.min.z, zone.max.x, zone.max.y, zone.max.z);
 
                                 CommandFeedback.send(context.getSource(), "Created zone '" + id + "' from WorldEdit selection.");
                                 CommandFeedback.send(context.getSource(), "Saved to config/gerbarium/zones/" + id + "/zone.json");

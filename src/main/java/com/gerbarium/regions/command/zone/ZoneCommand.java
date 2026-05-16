@@ -1,8 +1,10 @@
 package com.gerbarium.regions.command.zone;
 
+import com.gerbarium.regions.GerbariumRegionsBridge;
 import com.gerbarium.regions.command.CommandFeedback;
 import com.gerbarium.regions.command.HelpCommand;
 import com.gerbarium.regions.network.GerbariumServerNetworking;
+import com.gerbarium.regions.runtime.BridgeRuntimeReloadDispatcher;
 import com.gerbarium.regions.storage.ZoneStorage;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -62,13 +64,17 @@ public final class ZoneCommand {
                         .then(argument("id", StringArgumentType.word())
                                 .executes(context -> {
                                     String id = StringArgumentType.getString(context, "id");
+                                    storage.reload();
 
                                     if (!storage.deleteZone(id)) {
                                         CommandFeedback.error(context.getSource(), "Zone not found: " + id);
                                         return 0;
                                     }
 
+                                    storage.reload();
+                                    BridgeRuntimeReloadDispatcher.reloadIfPresent();
                                     CommandFeedback.send(context.getSource(), "Deleted zone: " + id);
+                                    BridgeRuntimeReloadDispatcher.sendSavedHint(context.getSource());
                                     return 1;
                                 })
                         )

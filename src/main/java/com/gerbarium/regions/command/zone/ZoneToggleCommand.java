@@ -42,6 +42,7 @@ public final class ZoneToggleCommand {
     }
 
     private static int setEnabled(ServerCommandSource source, ZoneStorage storage, String id, boolean enabled) {
+        storage.reload();
         Optional<Zone> optionalZone = storage.findZone(id);
 
         if (optionalZone.isEmpty()) {
@@ -51,7 +52,8 @@ public final class ZoneToggleCommand {
 
         Zone zone = optionalZone.get();
         zone.enabled = enabled;
-        storage.save();
+        storage.addZone(zone);
+        storage.reload();
 
         CommandFeedback.send(source, (enabled ? "Enabled" : "Disabled") + " zone: " + id);
         BridgeRuntimeReloadDispatcher.reloadIfPresent();

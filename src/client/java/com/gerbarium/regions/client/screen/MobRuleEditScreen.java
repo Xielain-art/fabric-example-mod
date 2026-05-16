@@ -13,6 +13,7 @@ import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 
+import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,20 +32,28 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
     private TextFieldWidget respawnField;
     private TextFieldWidget chanceField;
     private TextFieldWidget retryField;
+    private TextFieldWidget afterDeathDelayField;
     private TextFieldWidget fixedXField;
     private TextFieldWidget fixedYField;
     private TextFieldWidget fixedZField;
     private TextFieldWidget positionAttemptsField;
     private TextFieldWidget minDistanceField;
+    private TextFieldWidget playerActivationRangeField;
 
     private CyclingButtonWidget<Boolean> enabledButton;
     private CyclingButtonWidget<SpawnType> spawnTypeButton;
     private CyclingButtonWidget<RefillMode> refillModeButton;
     private CyclingButtonWidget<String> spawnModeButton;
+    private CyclingButtonWidget<String> spawnTriggerButton;
     private CyclingButtonWidget<Boolean> allowSmallRoomButton;
     private CyclingButtonWidget<Boolean> spreadSpawnsButton;
     private CyclingButtonWidget<Boolean> despawnButton;
     private CyclingButtonWidget<Boolean> announceButton;
+    private CyclingButtonWidget<Boolean> respawnAfterDeathButton;
+    private CyclingButtonWidget<Boolean> respawnAfterDespawnButton;
+    private CyclingButtonWidget<Boolean> requirePlayerNearbyButton;
+    private CyclingButtonWidget<Boolean> requireChunkLoadedButton;
+    private CyclingButtonWidget<Boolean> allowForceLoadButton;
 
     public MobRuleEditScreen(String zoneId, MobRule existingRule) {
         super(Text.literal(existingRule == null ? "Add Mob Rule" : "Edit Mob Rule"));
@@ -73,7 +82,7 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
             addAdvancedPage(startX, topY, panelWidth);
         }
 
-        int footerY = height - 35;
+        int footerY = height - 32;
         addDrawableChild(ButtonWidget.builder(Text.literal("Save"), b -> save())
                 .dimensions(startX, footerY, panelWidth / 2 - 4, 20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> client.setScreen(new ZoneDetailsScreen(zoneId)))
@@ -81,18 +90,18 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
     }
 
     private void addPageNav(int startX, int panelWidth) {
-        int pagY = 24;
-        int buttonW = 72;
-        int labelW = 108;
-        int totalW = buttonW * 2 + labelW + 24;
+        int pagY = 22;
+        int buttonW = 64;
+        int labelW = 100;
+        int totalW = buttonW * 2 + labelW + 16;
         int pagX = startX + panelWidth - totalW;
 
         addDrawableChild(ButtonWidget.builder(Text.literal("<"), b -> { capture(); page = Math.max(0, page - 1); init(); })
-                .dimensions(pagX, pagY, buttonW, 20).build());
+                .dimensions(pagX, pagY, buttonW, 18).build());
         addDrawableChild(ButtonWidget.builder(Text.literal(pageLabel()), b -> {})
-                .dimensions(pagX + buttonW + 4, pagY, labelW, 20).build());
+                .dimensions(pagX + buttonW + 4, pagY, labelW, 18).build());
         addDrawableChild(ButtonWidget.builder(Text.literal(">"), b -> { capture(); page = Math.min(PAGE_COUNT - 1, page + 1); init(); })
-                .dimensions(pagX + buttonW + 4 + labelW + 4, pagY, buttonW, 20).build());
+                .dimensions(pagX + buttonW + 4 + labelW + 4, pagY, buttonW, 18).build());
     }
 
     private String pageLabel() {
@@ -105,12 +114,14 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
     }
 
     private void addBaseFields(int startX, int topY, int panelWidth) {
-        int rowH = 40;
+        int rowH = compactRowH();
         int labelColor = 0xA5FFB5;
 
+        // Row 0: Rule Name
         ruleNameField = field(startX, topY, Math.max(180, panelWidth - 130), draft.name == null ? "" : draft.name);
         addDrawableChild(ruleNameField);
 
+        // Row 1: Entity + Pick
         entityField = field(startX, topY + rowH, Math.max(180, panelWidth - 110), draft.entity);
         addDrawableChild(entityField);
         addDrawableChild(ButtonWidget.builder(Text.literal("Pick Entity"), b -> {
@@ -118,21 +129,20 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
             client.setScreen(new EntityPickerScreen(this, this, draft.entity));
         }).dimensions(startX + Math.max(184, panelWidth - 102), topY + rowH, 96, 20).build());
 
+        // Row 2: Enabled + Spawn Type
         enabledButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(Boolean.TRUE.equals(draft.enabled))
-                .build(startX, topY + rowH * 2, 140, 20, Text.literal("Enabled"), (b, v) -> {}));
+                .build(startX, topY + rowH * 2, Math.max(140, panelWidth / 2 - 4), 20, Text.literal("Enabled"), (b, v) -> {}));
 
         spawnTypeButton = addDrawableChild(CyclingButtonWidget.<SpawnType>builder(v -> Text.literal(v.name()))
                 .values(List.of(SpawnType.PACK, SpawnType.UNIQUE))
                 .initially(draft.spawnType)
-                .build(startX + 150, topY + rowH * 2, Math.max(120, panelWidth - 150), 20, Text.literal("Spawn Type"), (b, v) -> {
+                .build(startX + Math.max(144, panelWidth / 2), topY + rowH * 2, Math.max(140, panelWidth / 2 - 4), 20, Text.literal("Spawn Type"), (b, v) -> {
                     capture();
                     draft.spawnType = v;
-                    if (v == SpawnType.UNIQUE) {
-                        draft.refillMode = RefillMode.AFTER_DEATH;
-                    }
                     init();
                 }));
 
+        // Row 3: Boundary
         int boundaryY = topY + rowH * 3;
         String boundaryText = "Boundary: " + boundarySummary();
         addDrawableChild(ButtonWidget.builder(Text.literal(boundaryText), b -> {})
@@ -145,7 +155,7 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
 
     private void addSpawnPage(int startX, int topY, int panelWidth) {
         int rowH = compactRowH();
-        int half = Math.max(120, (panelWidth - 6) / 2);
+        int half = Math.max(110, (panelWidth - 8) / 2);
 
         refillModeButton = addDrawableChild(CyclingButtonWidget.<RefillMode>builder(v -> Text.literal(v.name()))
                 .values(List.of(RefillMode.ON_ACTIVATION, RefillMode.TIMED, RefillMode.AFTER_DEATH))
@@ -154,23 +164,95 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
 
         int y2 = topY + rowH;
         maxAliveField = field(startX, y2, half, String.valueOf(draft.maxAlive));
-        spawnCountField = field(startX + half + 6, y2, half, String.valueOf(draft.spawnCount));
-        respawnField = field(startX, y2 + rowH, half, String.valueOf(draft.respawnSeconds));
-        chanceField = field(startX + half + 6, y2 + rowH, half, String.valueOf(draft.chance));
+        spawnCountField = field(startX + half + 8, y2, half, String.valueOf(draft.spawnCount));
         addDrawableChild(maxAliveField);
         addDrawableChild(spawnCountField);
+
+        int y3 = y2 + rowH;
+        respawnField = field(startX, y3, half, String.valueOf(draft.respawnSeconds));
+        chanceField = field(startX + half + 8, y3, half, String.valueOf(draft.chance));
         addDrawableChild(respawnField);
         addDrawableChild(chanceField);
 
-        int y3 = y2 + rowH * 2;
-        retryField = field(startX, y3, panelWidth, String.valueOf(draft.failedSpawnRetrySeconds));
+        int y4 = y3 + rowH;
+        retryField = field(startX, y4, half, String.valueOf(draft.failedSpawnRetrySeconds));
+        afterDeathDelayField = field(startX + half + 8, y4, half, String.valueOf(draft.afterDeathDelaySeconds));
         addDrawableChild(retryField);
+        addDrawableChild(afterDeathDelayField);
 
+        int y5 = y4 + rowH;
+        spawnTriggerButton = addDrawableChild(CyclingButtonWidget.<String>builder(Text::literal)
+                .values(List.of(MobRule.SPAWN_TRIGGER_TIMER, MobRule.SPAWN_TRIGGER_AFTER_DEATH, MobRule.SPAWN_TRIGGER_ON_ACTIVATION, MobRule.SPAWN_TRIGGER_MANUAL))
+                .initially(draft.spawnTrigger == null ? MobRule.SPAWN_TRIGGER_TIMER : draft.spawnTrigger)
+                .build(startX, y5, panelWidth, 20, Text.literal("Spawn Trigger"), (b, v) -> {}));
+
+        int y6 = y5 + rowH;
+        respawnAfterDeathButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.respawnAfterDeath)
+                .build(startX, y6, half, 20, Text.literal("Respawn After Death"), (b, v) -> {}));
+        respawnAfterDespawnButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.respawnAfterDespawn)
+                .build(startX + half + 8, y6, half, 20, Text.literal("Respawn After Despawn"), (b, v) -> {}));
+    }
+
+    private void addPlacementPage(int startX, int topY, int panelWidth) {
+        int rowH = compactRowH();
+        int third = Math.max(70, (panelWidth - 16) / 3);
+        int half = Math.max(110, (panelWidth - 8) / 2);
+
+        spawnModeButton = addDrawableChild(CyclingButtonWidget.<String>builder(Text::literal)
+                .values(List.of(
+                        MobRule.SPAWN_MODE_RANDOM_VALID_POSITION,
+                        MobRule.SPAWN_MODE_CENTER,
+                        MobRule.SPAWN_MODE_BOSS_ROOM,
+                        MobRule.SPAWN_MODE_FIXED_POINT))
+                .initially(draft.spawnMode == null ? MobRule.SPAWN_MODE_RANDOM_VALID_POSITION : draft.spawnMode)
+                .build(startX, topY, panelWidth, 20, Text.literal("Spawn Mode"), (b, v) -> {
+                    capture();
+                    draft.spawnMode = v;
+                    if (MobRule.SPAWN_MODE_BOSS_ROOM.equals(v)) {
+                        draft.allowSmallRoom = true;
+                        draft.spawnCount = Math.max(1, Math.min(draft.spawnCount, 1));
+                        draft.maxAlive = Math.max(1, Math.min(draft.maxAlive, 1));
+                    }
+                    init();
+                }));
+
+        int y1 = topY + rowH;
+        fixedXField = field(startX, y1, third, draft.fixedX == null ? "" : String.valueOf(draft.fixedX));
+        fixedYField = field(startX + third + 8, y1, third, draft.fixedY == null ? "" : String.valueOf(draft.fixedY));
+        fixedZField = field(startX + (third + 8) * 2, y1, third, draft.fixedZ == null ? "" : String.valueOf(draft.fixedZ));
+        addDrawableChild(fixedXField);
+        addDrawableChild(fixedYField);
+        addDrawableChild(fixedZField);
+
+        int y2 = y1 + rowH;
+        positionAttemptsField = field(startX, y2, half, String.valueOf(draft.positionAttempts));
+        minDistanceField = field(startX + half + 8, y2, half, String.valueOf(draft.minDistanceBetweenSpawns));
+        addDrawableChild(positionAttemptsField);
+        addDrawableChild(minDistanceField);
+
+        int y3 = y2 + rowH;
+        allowSmallRoomButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.allowSmallRoom)
+                .build(startX, y3, half, 20, Text.literal("Allow Small Room"), (b, v) -> {}));
+        spreadSpawnsButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.spreadSpawns)
+                .build(startX + half + 8, y3, half, 20, Text.literal("Spread Spawns"), (b, v) -> {}));
+
+        int y4 = y3 + rowH;
+        requirePlayerNearbyButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.requirePlayerNearby)
+                .build(startX, y4, half, 20, Text.literal("Require Player Nearby"), (b, v) -> {}));
+        playerActivationRangeField = field(startX + half + 8, y4, half, String.valueOf(draft.playerActivationRange));
+        addDrawableChild(playerActivationRangeField);
+
+        int y5 = y4 + rowH;
+        requireChunkLoadedButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.requireChunkLoaded)
+                .build(startX, y5, half, 20, Text.literal("Require Chunk Loaded"), (b, v) -> {}));
+        allowForceLoadButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.allowForceLoad)
+                .build(startX + half + 8, y5, half, 20, Text.literal("Allow Force Load"), (b, v) -> {}));
     }
 
     private void addAdvancedPage(int startX, int topY, int panelWidth) {
         int rowH = compactRowH();
         int companionCount = draft.companions == null ? 0 : draft.companions.size();
+
         addDrawableChild(ButtonWidget.builder(Text.literal("Edit Companions"), b -> {
             capture();
             String label = draft.name == null || draft.name.isBlank() ? "(new rule)" : draft.name;
@@ -191,67 +273,29 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
         announceButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.announceOnSpawn)
                 .build(startX, topY + rowH * 3, panelWidth, 20, Text.literal("Announce On Spawn"), (b, v) -> {}));
 
-    }
-
-    private void addPlacementPage(int startX, int topY, int panelWidth) {
-        int rowH = compactRowH();
-        int third = Math.max(70, (panelWidth - 12) / 3);
-        int half = Math.max(120, (panelWidth - 6) / 2);
-
-        spawnModeButton = addDrawableChild(CyclingButtonWidget.<String>builder(Text::literal)
-                .values(List.of(
-                        MobRule.SPAWN_MODE_RANDOM_VALID_POSITION,
-                        MobRule.SPAWN_MODE_CENTER,
-                        MobRule.SPAWN_MODE_BOSS_ROOM,
-                        MobRule.SPAWN_MODE_FIXED_POINT))
-                .initially(draft.spawnMode == null ? MobRule.SPAWN_MODE_RANDOM_VALID_POSITION : draft.spawnMode)
-                .build(startX, topY, panelWidth, 20, Text.literal("Spawn Mode"), (b, v) -> {
-                    capture();
-                    draft.spawnMode = v;
-                    if (MobRule.SPAWN_MODE_BOSS_ROOM.equals(v)) {
-                        draft.allowSmallRoom = true;
-                        draft.spawnCount = Math.max(1, Math.min(draft.spawnCount, 1));
-                        draft.maxAlive = Math.max(1, Math.min(draft.maxAlive, 1));
-                    }
-                    init();
-                }));
-
-        fixedXField = field(startX, topY + rowH, third, draft.fixedX == null ? "" : String.valueOf(draft.fixedX));
-        fixedYField = field(startX + third + 6, topY + rowH, third, draft.fixedY == null ? "" : String.valueOf(draft.fixedY));
-        fixedZField = field(startX + (third + 6) * 2, topY + rowH, third, draft.fixedZ == null ? "" : String.valueOf(draft.fixedZ));
-        addDrawableChild(fixedXField);
-        addDrawableChild(fixedYField);
-        addDrawableChild(fixedZField);
-
-        positionAttemptsField = field(startX, topY + rowH * 2, half, String.valueOf(draft.positionAttempts));
-        minDistanceField = field(startX + half + 6, topY + rowH * 2, half, String.valueOf(draft.minDistanceBetweenSpawns));
-        addDrawableChild(positionAttemptsField);
-        addDrawableChild(minDistanceField);
-
-        allowSmallRoomButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.allowSmallRoom)
-                .build(startX, topY + rowH * 3, half, 20, Text.literal("Allow Small Room"), (b, v) -> {}));
-        spreadSpawnsButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.spreadSpawns)
-                .build(startX + half + 6, topY + rowH * 3, half, 20, Text.literal("Spread Spawns"), (b, v) -> {}));
-
+        int presetY = topY + rowH * 4;
         addDrawableChild(ButtonWidget.builder(Text.literal("Boss Preset"), b -> {
             capture();
             draft.spawnType = SpawnType.UNIQUE;
             draft.refillMode = RefillMode.AFTER_DEATH;
             draft.spawnMode = MobRule.SPAWN_MODE_BOSS_ROOM;
+            draft.spawnTrigger = MobRule.SPAWN_TRIGGER_AFTER_DEATH;
             draft.allowSmallRoom = true;
             draft.spawnCount = 1;
             draft.maxAlive = 1;
             draft.spreadSpawns = false;
+            draft.respawnAfterDeath = true;
+            draft.afterDeathDelaySeconds = 30;
             init();
-        }).dimensions(startX, topY + rowH * 4, panelWidth, 20).build());
+        }).dimensions(startX, presetY, panelWidth, 20).build());
     }
 
     private int contentTopY() {
-        return height < 220 ? 48 : 56;
+        return height < 220 ? 44 : 54;
     }
 
     private int compactRowH() {
-        return height < 220 ? 24 : 36;
+        return height < 220 ? 22 : 30;
     }
 
     private TextFieldWidget field(int x, int y, int w, String value) {
@@ -279,6 +323,9 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
         if (spawnModeButton != null) {
             draft.spawnMode = spawnModeButton.getValue();
         }
+        if (spawnTriggerButton != null) {
+            draft.spawnTrigger = spawnTriggerButton.getValue();
+        }
         if (maxAliveField != null) {
             draft.maxAlive = parseInt(maxAliveField, draft.maxAlive);
         }
@@ -293,6 +340,9 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
         }
         if (retryField != null) {
             draft.failedSpawnRetrySeconds = parseInt(retryField, draft.failedSpawnRetrySeconds);
+        }
+        if (afterDeathDelayField != null) {
+            draft.afterDeathDelaySeconds = parseInt(afterDeathDelayField, draft.afterDeathDelaySeconds);
         }
         if (fixedXField != null) {
             draft.fixedX = parseNullableInt(fixedXField);
@@ -320,6 +370,24 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
         }
         if (announceButton != null) {
             draft.announceOnSpawn = announceButton.getValue();
+        }
+        if (respawnAfterDeathButton != null) {
+            draft.respawnAfterDeath = respawnAfterDeathButton.getValue();
+        }
+        if (respawnAfterDespawnButton != null) {
+            draft.respawnAfterDespawn = respawnAfterDespawnButton.getValue();
+        }
+        if (requirePlayerNearbyButton != null) {
+            draft.requirePlayerNearby = requirePlayerNearbyButton.getValue();
+        }
+        if (playerActivationRangeField != null) {
+            draft.playerActivationRange = parseInt(playerActivationRangeField, draft.playerActivationRange);
+        }
+        if (requireChunkLoadedButton != null) {
+            draft.requireChunkLoaded = requireChunkLoadedButton.getValue();
+        }
+        if (allowForceLoadButton != null) {
+            draft.allowForceLoad = allowForceLoadButton.getValue();
         }
     }
 
@@ -381,45 +449,54 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
 
         int panelWidth = ScreenLayout.panelWidth(width, 700);
         int startX = ScreenLayout.panelLeft(width, panelWidth);
-        ScreenLayout.drawPanel(context, startX, 15, panelWidth, height - 15);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 8, 0xFFFFFF);
+        ScreenLayout.drawPanel(context, startX, 12, panelWidth, height - 12);
+        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 6, 0xFFFFFF);
 
-        context.drawTextWithShadow(textRenderer, "Page " + (page + 1) + " of " + PAGE_COUNT, startX, 29, 0xA5FFB5);
-        context.drawTextWithShadow(textRenderer, "Use the page buttons to switch sections", startX + 110, 29, 0x888888);
+        context.drawTextWithShadow(textRenderer, "Page " + (page + 1) + " of " + PAGE_COUNT, startX, 26, 0xA5FFB5);
+        context.drawTextWithShadow(textRenderer, "Use the page buttons to switch sections", startX + 110, 26, 0x888888);
 
         if (page == 0) {
-            context.drawTextWithShadow(textRenderer, "Rule Name", startX, 50, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Entity", startX, 90, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Enabled", startX, 130, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Spawn Type", startX + 150, 130, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Boundary Control", startX, 170, 0xA5FFB5);
-            ScreenLayout.drawWrapped(context, textRenderer, boundaryHelp(), startX, 195, panelWidth, 0xAAAAAA);
+            int rowH = compactRowH();
+            context.drawTextWithShadow(textRenderer, "Rule Name", startX, 46, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Entity", startX, 46 + rowH, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Enabled", startX, 46 + rowH * 2, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Spawn Type", startX + Math.max(144, panelWidth / 2), 46 + rowH * 2, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Boundary Control", startX, 46 + rowH * 3, 0xA5FFB5);
+            ScreenLayout.drawWrapped(context, textRenderer, boundaryHelp(), startX, 46 + rowH * 3 + 22, panelWidth, 0xAAAAAA);
         } else if (page == 1) {
-            int half = Math.max(120, (panelWidth - 6) / 2);
+            int half = Math.max(110, (panelWidth - 8) / 2);
             int topY = contentTopY();
             int rowH = compactRowH();
             context.drawTextWithShadow(textRenderer, "Refill Mode", startX, topY - 6, 0xA5FFB5);
             context.drawTextWithShadow(textRenderer, "Max Alive", startX, topY + rowH - 6, 0x7FD7A5);
-            context.drawTextWithShadow(textRenderer, "Spawn Count", startX + half + 6, topY + rowH - 6, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Spawn Count", startX + half + 8, topY + rowH - 6, 0x7FD7A5);
             context.drawTextWithShadow(textRenderer, "Respawn Secs", startX, topY + rowH * 2 - 6, 0x7FD7A5);
-            context.drawTextWithShadow(textRenderer, "Chance (0..1)", startX + half + 6, topY + rowH * 2 - 6, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Chance (0..1)", startX + half + 8, topY + rowH * 2 - 6, 0x7FD7A5);
             context.drawTextWithShadow(textRenderer, "Retry Seconds", startX, topY + rowH * 3 - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "After Death Delay", startX + half + 8, topY + rowH * 3 - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Spawn Trigger", startX, topY + rowH * 4 - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Respawn After Death", startX, topY + rowH * 5 - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Respawn After Despawn", startX + half + 8, topY + rowH * 5 - 6, 0xA5FFB5);
             if (height >= 240) {
-                ScreenLayout.drawWrapped(context, textRenderer, spawnWarning(), startX, topY + rowH * 4 + 4, panelWidth, draft.spawnType == SpawnType.PACK ? 0xFFAA55 : 0xFFCC66);
+                ScreenLayout.drawWrapped(context, textRenderer, spawnWarning(), startX, topY + rowH * 6 + 4, panelWidth, draft.spawnType == SpawnType.PACK ? 0xFFAA55 : 0xFFCC66);
             }
         } else if (page == 2) {
-            int third = Math.max(70, (panelWidth - 12) / 3);
-            int half = Math.max(120, (panelWidth - 6) / 2);
+            int third = Math.max(70, (panelWidth - 16) / 3);
+            int half = Math.max(110, (panelWidth - 8) / 2);
             int topY = contentTopY();
             int rowH = compactRowH();
             context.drawTextWithShadow(textRenderer, "Spawn Mode", startX, topY - 6, 0xA5FFB5);
             context.drawTextWithShadow(textRenderer, "Fixed X", startX, topY + rowH - 6, 0x7FD7A5);
-            context.drawTextWithShadow(textRenderer, "Fixed Y", startX + third + 6, topY + rowH - 6, 0x7FD7A5);
-            context.drawTextWithShadow(textRenderer, "Fixed Z", startX + (third + 6) * 2, topY + rowH - 6, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Fixed Y", startX + third + 8, topY + rowH - 6, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Fixed Z", startX + (third + 8) * 2, topY + rowH - 6, 0x7FD7A5);
             context.drawTextWithShadow(textRenderer, "Attempts", startX, topY + rowH * 2 - 6, 0x7FD7A5);
-            context.drawTextWithShadow(textRenderer, "Min Distance", startX + half + 6, topY + rowH * 2 - 6, 0x7FD7A5);
+            context.drawTextWithShadow(textRenderer, "Min Distance", startX + half + 8, topY + rowH * 2 - 6, 0x7FD7A5);
             context.drawTextWithShadow(textRenderer, "Small Room", startX, topY + rowH * 3 - 6, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Spread", startX + half + 6, topY + rowH * 3 - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Spread", startX + half + 8, topY + rowH * 3 - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Require Player Nearby", startX, topY + rowH * 4 - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Player Range", startX + half + 8, topY + rowH * 4 - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Require Chunk Loaded", startX, topY + rowH * 5 - 6, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Allow Force Load", startX + half + 8, topY + rowH * 5 - 6, 0xA5FFB5);
         } else {
             int topY = contentTopY();
             int rowH = compactRowH();
@@ -433,7 +510,7 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
         }
 
         if (!error.isBlank()) {
-            ScreenLayout.drawWrapped(context, textRenderer, error, startX, height - 64, panelWidth, 0xFF5555);
+            ScreenLayout.drawWrapped(context, textRenderer, error, startX, height - 58, panelWidth, 0xFF5555);
         }
 
         super.render(context, mouseX, mouseY, delta);
@@ -461,38 +538,9 @@ public class MobRuleEditScreen extends Screen implements EntitySelectionConsumer
         return mode + extra + ", " + draft.boundaryCheckIntervalTicks + "t";
     }
 
+    private static final Gson GSON = new Gson();
+
     private static MobRule cloneRule(MobRule src) {
-        MobRule r = new MobRule();
-        r.id = src.id;
-        r.name = src.name;
-        r.entity = src.entity;
-        r.enabled = src.enabled;
-        r.spawnType = src.spawnType;
-        r.refillMode = src.refillMode;
-        r.maxAlive = src.maxAlive;
-        r.spawnCount = src.spawnCount;
-        r.respawnSeconds = src.respawnSeconds;
-        r.chance = src.chance;
-        r.cooldownStart = src.cooldownStart;
-        r.spawnWhenReady = src.spawnWhenReady;
-        r.failedSpawnRetrySeconds = src.failedSpawnRetrySeconds;
-        r.despawnWhenZoneInactive = src.despawnWhenZoneInactive;
-        r.announceOnSpawn = src.announceOnSpawn;
-        r.timedMaxSpawnsPerActivation = src.timedMaxSpawnsPerActivation;
-        r.boundaryMode = src.boundaryMode;
-        r.boundaryMaxOutsideSeconds = src.boundaryMaxOutsideSeconds;
-        r.boundaryCheckIntervalTicks = src.boundaryCheckIntervalTicks;
-        r.boundaryTeleportBack = src.boundaryTeleportBack;
-        r.spawnMode = src.spawnMode;
-        r.fixedX = src.fixedX;
-        r.fixedY = src.fixedY;
-        r.fixedZ = src.fixedZ;
-        r.allowSmallRoom = src.allowSmallRoom;
-        r.positionAttempts = src.positionAttempts;
-        r.minDistanceBetweenSpawns = src.minDistanceBetweenSpawns;
-        r.spreadSpawns = src.spreadSpawns;
-        r.boundaryModeWasInvalid = src.boundaryModeWasInvalid;
-        r.companions = src.companions == null ? new ArrayList<>() : new ArrayList<>(src.companions);
-        return r;
+        return GSON.fromJson(GSON.toJson(src), MobRule.class);
     }
 }

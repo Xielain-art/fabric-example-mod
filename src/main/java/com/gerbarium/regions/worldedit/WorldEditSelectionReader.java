@@ -16,13 +16,38 @@ public final class WorldEditSelectionReader {
     }
 
     public static Zone readSelection(ServerPlayerEntity player, String zoneId) throws Exception {
+        if (!isAvailable()) {
+            throw new IllegalStateException("WorldEdit is not loaded");
+        }
         Object worldEditPlayer = adaptPlayer(player);
+        if (worldEditPlayer == null) {
+            throw new IllegalStateException("WorldEdit player adapter returned null");
+        }
         Object localSession = getLocalSession(worldEditPlayer);
+        if (localSession == null) {
+            throw new IllegalStateException("WorldEdit local session is null");
+        }
         Object world = invoke(worldEditPlayer, "getWorld");
+        if (world == null) {
+            throw new IllegalStateException("WorldEdit world is null");
+        }
 
         Object region = invoke(localSession, "getSelection", new Class<?>[]{classFor("com.sk89q.worldedit.world.World")}, new Object[]{world});
+        if (region == null) {
+            throw new IllegalStateException("WorldEdit selection is null. Make a selection with //wand first.");
+        }
+
+        // Validate region type supports getMinimumPoint/getMaximumPoint
+        String regionClass = region.getClass().getName();
+        if (!regionClass.toLowerCase().contains("cuboid")) {
+            throw new IllegalStateException("WorldEdit selection must be a cuboid region. Current: " + regionClass);
+        }
+
         Object min = invoke(region, "getMinimumPoint");
         Object max = invoke(region, "getMaximumPoint");
+        if (min == null || max == null) {
+            throw new IllegalStateException("WorldEdit selection bounds are null");
+        }
 
         String dimension = player.getServerWorld().getRegistryKey().getValue().toString();
 
@@ -76,15 +101,29 @@ public final class WorldEditSelectionReader {
     private static Object getLocalSession(Object worldEditPlayer) throws Exception {
         Object worldEdit = invokeStatic("com.sk89q.worldedit.WorldEdit", "getInstance", new Class<?>[0], new Object[0]);
         Object sessionManager = invoke(worldEdit, "getSessionManager");
+        
+        // Try Actor first (common interface)
+        Object result = tryGetSession(sessionManager, "com.sk89q.worldedit.extension.platform.Actor", worldEditPlayer);
+        if (result != null) return result;
+        
+        // Try SessionOwner (base interface)
+        result = tryGetSession(sessionManager, "com.sk89q.worldedit.session.SessionOwner", worldEditPlayer);
+        if (result != null) return result;
+        
+        // Fallback: find any compatible get method
+        return invokeCompatible(sessionManager, "get", worldEditPlayer);
+    }
+    
+    private static Object tryGetSession(Object sessionManager, String argClassName, Object worldEditPlayer) {
         try {
-            return invoke(sessionManager, "get", new Class<?>[]{classFor("com.sk89q.worldedit.extension.platform.Actor")}, new Object[]{worldEditPlayer});
-        } catch (NoSuchMethodException ignoredActor) {
-            try {
-                return invoke(sessionManager, "get", new Class<?>[]{classFor("com.sk89q.worldedit.session.SessionOwner")}, new Object[]{worldEditPlayer});
-            } catch (NoSuchMethodException ignoredOwner) {
-                return invokeCompatible(sessionManager, "get", worldEditPlayer);
+            Class<?> argClass = classFor(argClassName);
+            if (argClass.isInstance(worldEditPlayer)) {
+                return invoke(sessionManager, "get", new Class<?>[]{argClass}, new Object[]{worldEditPlayer});
             }
+        } catch (Exception e) {
+            // Expected if class not found or method not found
         }
+        return null;
     }
 
     private static Class<?> classFor(String fqcn) throws ClassNotFoundException {
@@ -92,11 +131,36 @@ public final class WorldEditSelectionReader {
     }
 
     private static Object invoke(Object target, String method) throws Exception {
-        return target.getClass().getMethod(method).invoke(target);
+        try {
+            return target.getClass().getMethod(method).invoke(target);
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception) throw (Exception) cause;
+            if (cause instanceof Error) throw (Error) cause;
+            throw e;
+        }
     }
 
     private static Object invoke(Object target, String method, Class<?>[] argTypes, Object[] args) throws Exception {
-        return target.getClass().getMethod(method, argTypes).invoke(target, args);
+        try {
+            return target.getClass().getMethod(method, argTypes).invoke(target, args);
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception) throw (Exception) cause;
+            if (cause instanceof Error) throw (Error) cause;
+            throw e;
+        }
+    }
+
+    private static Object invokeStatic(String className, String method, Class<?>[] argTypes, Object[] args) throws Exception {
+        try {
+            return classFor(className).getMethod(method, argTypes).invoke(null, args);
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception) throw (Exception) cause;
+            if (cause instanceof Error) throw (Error) cause;
+            throw e;
+        }
     }
 
     private static Object invokeCompatible(Object target, String method, Object arg) throws Exception {
@@ -107,12 +171,26 @@ public final class WorldEditSelectionReader {
             }
             Class<?> param = candidate.getParameterTypes()[0];
             if (arg == null || param.isInstance(arg) || param.isAssignableFrom(arg.getClass())) {
-                return candidate.invoke(target, arg);
+                try {
+                    return candidate.invoke(target, arg);
+                } catch (java.lang.reflect.InvocationTargetException e) {
+                    Throwable cause = e.getCause();
+                    if (cause instanceof Exception) throw (Exception) cause;
+                    if (cause instanceof Error) throw (Error) cause;
+                    throw e;
+                }
             }
             fallback = candidate;
         }
         if (fallback != null) {
-            return fallback.invoke(target, arg);
+            try {
+                return fallback.invoke(target, arg);
+            } catch (java.lang.reflect.InvocationTargetException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof Exception) throw (Exception) cause;
+                if (cause instanceof Error) throw (Error) cause;
+                throw e;
+            }
         }
         throw new NoSuchMethodException(method + "(compatible)");
     }
@@ -123,8 +201,15 @@ public final class WorldEditSelectionReader {
                     new Class<?>[]{classFor("com.sk89q.worldedit.world.World"), classFor("com.sk89q.worldedit.regions.selector.RegionSelector")},
                     new Object[]{world, selector});
             return;
-        } catch (NoSuchMethodException ignored) {
+        } catch (NoSuchMethodException | NoSuchMethodError e) {
             invokeCompatibleByArgs(localSession, "setRegionSelector", world, selector);
+        } catch (Exception e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof NoSuchMethodException || cause instanceof NoSuchMethodError) {
+                invokeCompatibleByArgs(localSession, "setRegionSelector", world, selector);
+                return;
+            }
+            throw e;
         }
     }
 
@@ -144,17 +229,27 @@ public final class WorldEditSelectionReader {
                 }
             }
             if (compatible) {
-                return candidate.invoke(target, args);
+                try {
+                    return candidate.invoke(target, args);
+                } catch (java.lang.reflect.InvocationTargetException e) {
+                    Throwable cause = e.getCause();
+                    if (cause instanceof Exception) throw (Exception) cause;
+                    if (cause instanceof Error) throw (Error) cause;
+                    throw e;
+                }
             }
             fallback = candidate;
         }
         if (fallback != null) {
-            return fallback.invoke(target, args);
+            try {
+                return fallback.invoke(target, args);
+            } catch (java.lang.reflect.InvocationTargetException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof Exception) throw (Exception) cause;
+                if (cause instanceof Error) throw (Error) cause;
+                throw e;
+            }
         }
         throw new NoSuchMethodException(method + "(compatible args)");
-    }
-
-    private static Object invokeStatic(String className, String method, Class<?>[] argTypes, Object[] args) throws Exception {
-        return classFor(className).getMethod(method, argTypes).invoke(null, args);
     }
 }

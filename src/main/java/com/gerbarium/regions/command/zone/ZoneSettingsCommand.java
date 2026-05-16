@@ -66,6 +66,7 @@ public final class ZoneSettingsCommand {
     }
 
     private static int update(ZoneStorage storage, ServerCommandSource source, String zoneId, ZoneMutator mutator) {
+        storage.reload();
         Optional<Zone> oz = storage.findZone(zoneId);
         if (oz.isEmpty()) {
             CommandFeedback.error(source, "Zone not found: " + zoneId);

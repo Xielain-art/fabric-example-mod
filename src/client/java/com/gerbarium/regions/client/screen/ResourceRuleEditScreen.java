@@ -15,6 +15,8 @@ import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 
+import com.google.gson.Gson;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -437,41 +439,10 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
         super.render(context, mouseX, mouseY, delta);
     }
 
+    private static final Gson GSON = new Gson();
+
     private static ResourceRule cloneRule(ResourceRule src) {
-        ResourceRule r = new ResourceRule();
-        r.id = src.id;
-        r.name = src.name;
-        r.enabled = src.enabled;
-        r.targetBlocks = src.targetBlocks == null ? new ArrayList<>() : new ArrayList<>(src.targetBlocks);
-        r.resourceBlocks = src.resourceBlocks == null ? new ArrayList<>() : new ArrayList<>();
-        if (src.resourceBlocks != null) {
-            for (WeightedBlock wb : src.resourceBlocks) {
-                WeightedBlock copy = new WeightedBlock();
-                copy.block = wb.block;
-                copy.weight = wb.weight;
-                r.resourceBlocks.add(copy);
-            }
-        }
-        r.maxActiveBlocks = src.maxActiveBlocks;
-        r.spawnCount = src.spawnCount;
-        r.respawnSeconds = src.respawnSeconds;
-        r.chance = src.chance;
-        r.minY = src.minY;
-        r.maxY = src.maxY;
-        r.replaceMode = src.replaceMode;
-        r.restoreMode = src.restoreMode;
-        r.activationMode = src.activationMode;
-        r.restoreDelaySeconds = src.restoreDelaySeconds;
-        r.maxPositionAttempts = src.maxPositionAttempts;
-        r.requireLoadedChunk = src.requireLoadedChunk;
-        r.respectProtectedBlocks = src.respectProtectedBlocks;
-        r.dropOriginalBlockOnReplace = src.dropOriginalBlockOnReplace;
-        r.restoreIfNotMined = src.restoreIfNotMined;
-        r.preventPlayerPlacedBlocks = src.preventPlayerPlacedBlocks;
-        r.allowBlockEntities = src.allowBlockEntities;
-        r.placementMode = src.placementMode;
-        r.minDistanceBetweenResources = src.minDistanceBetweenResources;
-        return r;
+        return GSON.fromJson(GSON.toJson(src), ResourceRule.class);
     }
 
     private enum BlockPickTarget {

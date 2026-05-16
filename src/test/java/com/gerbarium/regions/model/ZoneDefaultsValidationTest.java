@@ -16,6 +16,22 @@ class ZoneDefaultsValidationTest {
     }
 
     @Test
+    void validateMobRuleAllowsPackAfterDeathRefill() {
+        MobRule rule = MobRule.packDefaults("mob-1", "minecraft:zombie");
+        rule.refillMode = RefillMode.AFTER_DEATH;
+
+        assertDoesNotThrow(() -> ZoneDefaults.validateMobRule(rule));
+    }
+
+    @Test
+    void validateMobRuleAllowsUniqueActivationRefill() {
+        MobRule rule = MobRule.uniqueDefaults("boss-1", "minecraft:zombie");
+        rule.refillMode = RefillMode.ON_ACTIVATION;
+
+        assertDoesNotThrow(() -> ZoneDefaults.validateMobRule(rule));
+    }
+
+    @Test
     void validateResourceRuleRejectsZeroBudgetValues() {
         ResourceRule rule = new ResourceRule();
         rule.id = "resource-1";

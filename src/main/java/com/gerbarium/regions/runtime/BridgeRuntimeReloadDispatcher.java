@@ -18,8 +18,9 @@ public final class BridgeRuntimeReloadDispatcher {
     }
 
     public static void reloadIfPresent() {
-        trigger(ZONES_RUNTIME_MOD_ID, ZONES_RUNTIME_API, "reload");
-        trigger(RESOURCES_RUNTIME_MOD_ID, RESOURCES_RUNTIME_API, "reload");
+        boolean runtimeTriggered = trigger(ZONES_RUNTIME_MOD_ID, ZONES_RUNTIME_API, "reload");
+        boolean resourceTriggered = trigger(RESOURCES_RUNTIME_MOD_ID, RESOURCES_RUNTIME_API, "reload");
+        GerbariumRegionsBridge.LOGGER.info("[GerbariumBridge] Notifying runtime/resource reload: runtime={} resource={}", runtimeTriggered, resourceTriggered);
     }
 
     public static void sendSavedHint(ServerCommandSource source) {

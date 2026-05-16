@@ -92,6 +92,7 @@ public final class ZoneDefaults {
             }
             normalizeBoundaryFields(rule, true);
             normalizeSpawnPlacementFields(rule, true);
+            normalizeTriggerFields(rule);
             return;
         }
 
@@ -119,6 +120,7 @@ public final class ZoneDefaults {
         }
         normalizeBoundaryFields(rule, false);
         normalizeSpawnPlacementFields(rule, false);
+        normalizeTriggerFields(rule);
     }
 
     public static void validateZone(Zone zone) {
@@ -186,12 +188,6 @@ public final class ZoneDefaults {
         if (rule.refillMode == null) {
             throw new IllegalArgumentException("Rule refillMode cannot be empty");
         }
-        if (rule.spawnType == SpawnType.PACK && rule.refillMode == RefillMode.AFTER_DEATH) {
-            throw new IllegalArgumentException("PACK supports ON_ACTIVATION or TIMED refillMode");
-        }
-        if (rule.spawnType == SpawnType.UNIQUE && rule.refillMode != RefillMode.AFTER_DEATH) {
-            throw new IllegalArgumentException("UNIQUE supports AFTER_DEATH refillMode");
-        }
         if (rule.maxAlive <= 0 || rule.spawnCount <= 0) {
             throw new IllegalArgumentException("maxAlive and spawnCount must be > 0");
         }
@@ -218,6 +214,15 @@ public final class ZoneDefaults {
         }
         if (!isValidSpawnMode(rule.spawnMode)) {
             throw new IllegalArgumentException("spawnMode must be one of RANDOM_VALID_POSITION, CENTER, NEAR_CENTER, FIXED_POINT, PLAYER_NEARBY, BOSS_ROOM");
+        }
+        if (!isValidSpawnTrigger(rule.spawnTrigger)) {
+            throw new IllegalArgumentException("spawnTrigger must be one of TIMER, AFTER_DEATH, ON_ACTIVATION, MANUAL");
+        }
+        if (rule.afterDeathDelaySeconds < 0) {
+            throw new IllegalArgumentException("afterDeathDelaySeconds must be >= 0");
+        }
+        if (rule.playerActivationRange < 0) {
+            throw new IllegalArgumentException("playerActivationRange must be >= 0");
         }
         if (MobRule.SPAWN_MODE_FIXED_POINT.equals(rule.spawnMode)
                 && (rule.fixedX == null || rule.fixedY == null || rule.fixedZ == null)) {
@@ -295,6 +300,13 @@ public final class ZoneDefaults {
                 || MobRule.SPAWN_MODE_FIXED_POINT.equals(mode)
                 || MobRule.SPAWN_MODE_PLAYER_NEARBY.equals(mode)
                 || MobRule.SPAWN_MODE_BOSS_ROOM.equals(mode);
+    }
+
+    public static boolean isValidSpawnTrigger(String trigger) {
+        return MobRule.SPAWN_TRIGGER_TIMER.equals(trigger)
+                || MobRule.SPAWN_TRIGGER_AFTER_DEATH.equals(trigger)
+                || MobRule.SPAWN_TRIGGER_ON_ACTIVATION.equals(trigger)
+                || MobRule.SPAWN_TRIGGER_MANUAL.equals(trigger);
     }
 
     public static String defaultBoundaryModeFor(SpawnType spawnType) {
@@ -465,6 +477,18 @@ public final class ZoneDefaults {
         }
         if (rule.minDistanceBetweenSpawns < 0) {
             rule.minDistanceBetweenSpawns = 2;
+        }
+    }
+
+    private static void normalizeTriggerFields(MobRule rule) {
+        if (!isValidSpawnTrigger(rule.spawnTrigger)) {
+            rule.spawnTrigger = MobRule.SPAWN_TRIGGER_TIMER;
+        }
+        if (rule.afterDeathDelaySeconds < 0) {
+            rule.afterDeathDelaySeconds = rule.respawnSeconds;
+        }
+        if (rule.playerActivationRange < 0) {
+            rule.playerActivationRange = 64;
         }
     }
 

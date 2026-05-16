@@ -16,6 +16,11 @@ public class MobRule {
     public static final String SPAWN_MODE_PLAYER_NEARBY = "PLAYER_NEARBY";
     public static final String SPAWN_MODE_BOSS_ROOM = "BOSS_ROOM";
 
+    public static final String SPAWN_TRIGGER_TIMER = "TIMER";
+    public static final String SPAWN_TRIGGER_AFTER_DEATH = "AFTER_DEATH";
+    public static final String SPAWN_TRIGGER_ON_ACTIVATION = "ON_ACTIVATION";
+    public static final String SPAWN_TRIGGER_MANUAL = "MANUAL";
+
     public String id;
     public String name;
     public String entity;
@@ -37,6 +42,10 @@ public class MobRule {
     public int boundaryCheckIntervalTicks = 40;
     public boolean boundaryTeleportBack = true;
     public String spawnMode = SPAWN_MODE_RANDOM_VALID_POSITION;
+    public String spawnTrigger = SPAWN_TRIGGER_TIMER;
+    public int afterDeathDelaySeconds = 30;
+    public boolean respawnAfterDeath = false;
+    public boolean respawnAfterDespawn = false;
     public Integer fixedX;
     public Integer fixedY;
     public Integer fixedZ;
@@ -44,6 +53,10 @@ public class MobRule {
     public int positionAttempts = 128;
     public int minDistanceBetweenSpawns = 2;
     public boolean spreadSpawns = true;
+    public boolean requirePlayerNearby = false;
+    public int playerActivationRange = 64;
+    public boolean requireChunkLoaded = true;
+    public boolean allowForceLoad = false;
     public transient boolean boundaryModeWasInvalid = false;
     public List<CompanionRule> companions = new ArrayList<>();
 
@@ -81,10 +94,18 @@ public class MobRule {
         rule.boundaryCheckIntervalTicks = 40;
         rule.boundaryTeleportBack = true;
         rule.spawnMode = SPAWN_MODE_RANDOM_VALID_POSITION;
+        rule.spawnTrigger = SPAWN_TRIGGER_TIMER;
+        rule.afterDeathDelaySeconds = 30;
+        rule.respawnAfterDeath = false;
+        rule.respawnAfterDespawn = false;
         rule.allowSmallRoom = true;
         rule.positionAttempts = 128;
         rule.minDistanceBetweenSpawns = 2;
         rule.spreadSpawns = true;
+        rule.requirePlayerNearby = false;
+        rule.playerActivationRange = 64;
+        rule.requireChunkLoaded = true;
+        rule.allowForceLoad = false;
         return rule;
     }
 
@@ -110,10 +131,18 @@ public class MobRule {
         rule.boundaryCheckIntervalTicks = 40;
         rule.boundaryTeleportBack = true;
         rule.spawnMode = SPAWN_MODE_BOSS_ROOM;
+        rule.spawnTrigger = SPAWN_TRIGGER_AFTER_DEATH;
+        rule.afterDeathDelaySeconds = 30;
+        rule.respawnAfterDeath = true;
+        rule.respawnAfterDespawn = false;
         rule.allowSmallRoom = true;
         rule.positionAttempts = 128;
         rule.minDistanceBetweenSpawns = 2;
         rule.spreadSpawns = true;
+        rule.requirePlayerNearby = true;
+        rule.playerActivationRange = 64;
+        rule.requireChunkLoaded = true;
+        rule.allowForceLoad = false;
         return rule;
     }
 

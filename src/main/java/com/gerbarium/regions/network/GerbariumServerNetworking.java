@@ -1,5 +1,6 @@
 package com.gerbarium.regions.network;
 
+import com.gerbarium.regions.GerbariumRegionsBridge;
 import com.gerbarium.regions.command.CommandFeedback;
 import com.gerbarium.regions.model.MobRule;
 import com.gerbarium.regions.model.ResourceRule;
@@ -188,6 +189,7 @@ public final class GerbariumServerNetworking {
                 STORAGE.reload();
                 BridgeRuntimeReloadDispatcher.reloadIfPresent();
 
+                GerbariumRegionsBridge.LOGGER.info("[GerbariumBridge] Added mob rule: zone={} rule={} entity={}", zoneId, incoming.id, incoming.entity);
                 CommandFeedback.send(player.getCommandSource(), "Saved mob rule '" + incoming.id + "' in zone '" + zoneId + "'.");
                 BridgeRuntimeReloadDispatcher.sendSavedHint(player.getCommandSource());
                 sendZones(player);
@@ -291,6 +293,7 @@ public final class GerbariumServerNetworking {
                     return;
                 }
 
+                GerbariumRegionsBridge.LOGGER.info("[GerbariumBridge] Removed mob rule: zone={} rule={}", zoneId, ruleId);
                 CommandFeedback.send(player.getCommandSource(), "Removed mob rule '" + ruleId + "' from zone '" + zoneId + "'.");
                 BridgeRuntimeReloadDispatcher.sendSavedHint(player.getCommandSource());
                 sendZones(player);
@@ -356,14 +359,29 @@ public final class GerbariumServerNetworking {
                     return;
                 }
 
+                Zone zone = optionalZone.get();
+                String playerDimension = player.getServerWorld()
+                        .getRegistryKey()
+                        .getValue()
+                        .toString();
+
+                if (!zone.dimension.equals(playerDimension)) {
+                    CommandFeedback.error(
+                            player.getCommandSource(),
+                            "Zone is in dimension '" + zone.dimension + "', but you are in '" + playerDimension + "'."
+                    );
+                    return;
+                }
+
                 try {
                     if (!WorldEditSelectionReader.isAvailable()) {
                         CommandFeedback.error(player.getCommandSource(), "WorldEdit mod is not loaded. Zone selection sync is unavailable.");
                         return;
                     }
                     WorldEditSelectionReader.clearSelection(player);
-                    WorldEditSelectionReader.applySelection(player, optionalZone.get());
+                    WorldEditSelectionReader.applySelection(player, zone);
 
+                    GerbariumRegionsBridge.LOGGER.info("[GerbariumBridge] Selected zone={} for player={}", zoneId, player.getName().getString());
                     CommandFeedback.send(player.getCommandSource(), "Selected zone in WorldEdit: " + zoneId);
                 } catch (Exception e) {
                     CommandFeedback.error(player.getCommandSource(), "Failed to select zone: " + e.getMessage());
@@ -622,10 +640,23 @@ public final class GerbariumServerNetworking {
         ServerPlayNetworking.send(player, GerbariumPackets.OPEN_GUI, buf);
     }
 
-    private static void sendZones(ServerPlayerEntity player) {
-        PacketByteBuf response = PacketByteBufs.create();
-        response.writeString(STORAGE.toJson(), MAX_STRING_LENGTH);
+    private static final int SAFE_PACKET_STRING = 16000;
 
+    private static void sendZones(ServerPlayerEntity player) {
+        String json = STORAGE.toJson();
+        int payloadSize = json.length();
+        GerbariumRegionsBridge.LOGGER.info("[GerbariumBridge] Sync zones to client: player={} zones={} payloadSize={}",
+                player.getName().getString(),
+                STORAGE.getData().zones.size(),
+                payloadSize);
+
+        PacketByteBuf response = PacketByteBufs.create();
+        if (payloadSize > SAFE_PACKET_STRING) {
+            GerbariumRegionsBridge.LOGGER.warn("[GerbariumBridge] Zone sync payload too large ({}), truncating to safe limit", payloadSize);
+            response.writeString(json.substring(0, SAFE_PACKET_STRING), SAFE_PACKET_STRING);
+        } else {
+            response.writeString(json, MAX_STRING_LENGTH);
+        }
         ServerPlayNetworking.send(player, GerbariumPackets.SYNC_ZONES, response);
     }
 

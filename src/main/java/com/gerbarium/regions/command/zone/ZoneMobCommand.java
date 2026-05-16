@@ -3,6 +3,8 @@ package com.gerbarium.regions.command.zone;
 import com.gerbarium.regions.command.CommandFeedback;
 import com.gerbarium.regions.model.CompanionRule;
 import com.gerbarium.regions.model.MobRule;
+import com.gerbarium.regions.model.RefillMode;
+import com.gerbarium.regions.model.SpawnType;
 import com.gerbarium.regions.model.Zone;
 import com.gerbarium.regions.model.ZoneDefaults;
 import com.gerbarium.regions.runtime.BridgeRuntimeReloadDispatcher;
@@ -37,6 +39,11 @@ public final class ZoneMobCommand {
                 .then(buildInfo(storage))
                 .then(buildEnable(storage, true))
                 .then(buildEnable(storage, false))
+                .then(buildTrigger(storage))
+                .then(buildSpawnMode(storage))
+                .then(buildAfterDeathDelay(storage))
+                .then(buildBossPreset(storage))
+                .then(buildSetField(storage))
                 .then(buildCompanionRoot(storage));
     }
 
@@ -91,6 +98,7 @@ public final class ZoneMobCommand {
                                                 .then(argument("checkIntervalTicks", IntegerArgumentType.integer(20))
                                                         .then(argument("teleportBack", BoolArgumentType.bool())
                                                                 .executes(ctx -> {
+                                                                    storage.reload();
                                                                     String zoneId = StringArgumentType.getString(ctx, "zone");
                                                                     String ruleId = StringArgumentType.getString(ctx, "ruleId");
                                                                     String mode = StringArgumentType.getString(ctx, "mode").toUpperCase();
@@ -140,6 +148,7 @@ public final class ZoneMobCommand {
     private static LiteralArgumentBuilder<ServerCommandSource> buildRemove(ZoneStorage storage) {
         return literal("remove").then(argument("zone", StringArgumentType.word()).then(argument("ruleId", StringArgumentType.word())
                 .executes(ctx -> {
+                    storage.reload();
                     Optional<Zone> oz = storage.findZone(StringArgumentType.getString(ctx, "zone"));
                     if (oz.isEmpty()) {
                         CommandFeedback.error(ctx.getSource(), "Zone not found.");
@@ -165,6 +174,7 @@ public final class ZoneMobCommand {
                 .then(argument("zone", StringArgumentType.word())
                         .then(argument("ruleId", StringArgumentType.word())
                                 .executes(ctx -> {
+                                    storage.reload();
                                     Optional<Zone> oz = storage.findZone(StringArgumentType.getString(ctx, "zone"));
                                     if (oz.isEmpty()) {
                                         CommandFeedback.error(ctx.getSource(), "Zone not found.");
@@ -223,6 +233,7 @@ public final class ZoneMobCommand {
     }
 
     private static int upsertRule(ServerCommandSource source, ZoneStorage storage, String zoneId, MobRule rule) {
+        storage.reload();
         Optional<Zone> oz = storage.findZone(zoneId);
         if (oz.isEmpty()) {
             CommandFeedback.error(source, "Zone not found: " + zoneId);
@@ -248,6 +259,221 @@ public final class ZoneMobCommand {
         return 1;
     }
 
+    private static LiteralArgumentBuilder<ServerCommandSource> buildTrigger(ZoneStorage storage) {
+        return literal("trigger")
+                .then(argument("zone", StringArgumentType.word())
+                        .then(argument("ruleId", StringArgumentType.word())
+                                .then(argument("trigger", StringArgumentType.word())
+                                        .executes(ctx -> {
+                                            String zoneId = StringArgumentType.getString(ctx, "zone");
+                                            String ruleId = StringArgumentType.getString(ctx, "ruleId");
+                                            String trigger = StringArgumentType.getString(ctx, "trigger").toUpperCase();
+                                            if (!ZoneDefaults.isValidSpawnTrigger(trigger)) {
+                                                CommandFeedback.error(ctx.getSource(), "Unknown spawn trigger: " + trigger);
+                                                return 0;
+                                            }
+                                            storage.reload();
+                                            Optional<Zone> oz = storage.findZone(zoneId);
+                                            if (oz.isEmpty()) {
+                                                CommandFeedback.error(ctx.getSource(), "Zone not found.");
+                                                return 0;
+                                            }
+                                            Optional<MobRule> or = findRule(oz.get(), ruleId);
+                                            if (or.isEmpty()) {
+                                                CommandFeedback.error(ctx.getSource(), "Mob rule not found: " + ruleId);
+                                                return 0;
+                                            }
+                                            MobRule rule = or.get();
+                                            rule.spawnTrigger = trigger;
+                                            storage.addZone(oz.get());
+                                            BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                                            CommandFeedback.send(ctx.getSource(), "Set spawn trigger to '" + trigger + "' for rule '" + ruleId + "'.");
+                                            BridgeRuntimeReloadDispatcher.sendSavedHint(ctx.getSource());
+                                            return 1;
+                                        }))));
+    }
+
+    private static LiteralArgumentBuilder<ServerCommandSource> buildSpawnMode(ZoneStorage storage) {
+        return literal("spawn-mode")
+                .then(argument("zone", StringArgumentType.word())
+                        .then(argument("ruleId", StringArgumentType.word())
+                                .then(argument("mode", StringArgumentType.word())
+                                        .executes(ctx -> {
+                                            String zoneId = StringArgumentType.getString(ctx, "zone");
+                                            String ruleId = StringArgumentType.getString(ctx, "ruleId");
+                                            String mode = StringArgumentType.getString(ctx, "mode").toUpperCase();
+                                            if (!ZoneDefaults.isValidSpawnMode(mode)) {
+                                                CommandFeedback.error(ctx.getSource(), "Unknown spawn mode: " + mode);
+                                                return 0;
+                                            }
+                                            storage.reload();
+                                            Optional<Zone> oz = storage.findZone(zoneId);
+                                            if (oz.isEmpty()) {
+                                                CommandFeedback.error(ctx.getSource(), "Zone not found.");
+                                                return 0;
+                                            }
+                                            Optional<MobRule> or = findRule(oz.get(), ruleId);
+                                            if (or.isEmpty()) {
+                                                CommandFeedback.error(ctx.getSource(), "Mob rule not found: " + ruleId);
+                                                return 0;
+                                            }
+                                            MobRule rule = or.get();
+                                            rule.spawnMode = mode;
+                                            storage.addZone(oz.get());
+                                            BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                                            CommandFeedback.send(ctx.getSource(), "Set spawn mode to '" + mode + "' for rule '" + ruleId + "'.");
+                                            BridgeRuntimeReloadDispatcher.sendSavedHint(ctx.getSource());
+                                            return 1;
+                                        }))));
+    }
+
+    private static LiteralArgumentBuilder<ServerCommandSource> buildAfterDeathDelay(ZoneStorage storage) {
+        return literal("after-death-delay")
+                .then(argument("zone", StringArgumentType.word())
+                        .then(argument("ruleId", StringArgumentType.word())
+                                .then(argument("seconds", IntegerArgumentType.integer(0))
+                                        .executes(ctx -> {
+                                            String zoneId = StringArgumentType.getString(ctx, "zone");
+                                            String ruleId = StringArgumentType.getString(ctx, "ruleId");
+                                            int seconds = IntegerArgumentType.getInteger(ctx, "seconds");
+                                            storage.reload();
+                                            Optional<Zone> oz = storage.findZone(zoneId);
+                                            if (oz.isEmpty()) {
+                                                CommandFeedback.error(ctx.getSource(), "Zone not found.");
+                                                return 0;
+                                            }
+                                            Optional<MobRule> or = findRule(oz.get(), ruleId);
+                                            if (or.isEmpty()) {
+                                                CommandFeedback.error(ctx.getSource(), "Mob rule not found: " + ruleId);
+                                                return 0;
+                                            }
+                                            MobRule rule = or.get();
+                                            rule.afterDeathDelaySeconds = seconds;
+                                            storage.addZone(oz.get());
+                                            BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                                            CommandFeedback.send(ctx.getSource(), "Set after-death delay to " + seconds + "s for rule '" + ruleId + "'.");
+                                            BridgeRuntimeReloadDispatcher.sendSavedHint(ctx.getSource());
+                                            return 1;
+                                        }))));
+    }
+
+    private static LiteralArgumentBuilder<ServerCommandSource> buildBossPreset(ZoneStorage storage) {
+        return literal("boss-preset")
+                .then(argument("zone", StringArgumentType.word())
+                        .then(argument("ruleId", StringArgumentType.word())
+                                .executes(ctx -> {
+                                    String zoneId = StringArgumentType.getString(ctx, "zone");
+                                    String ruleId = StringArgumentType.getString(ctx, "ruleId");
+                                    storage.reload();
+                                    Optional<Zone> oz = storage.findZone(zoneId);
+                                    if (oz.isEmpty()) {
+                                        CommandFeedback.error(ctx.getSource(), "Zone not found.");
+                                        return 0;
+                                    }
+                                    Optional<MobRule> or = findRule(oz.get(), ruleId);
+                                    if (or.isEmpty()) {
+                                        CommandFeedback.error(ctx.getSource(), "Mob rule not found: " + ruleId);
+                                        return 0;
+                                    }
+                                    MobRule rule = or.get();
+                                    rule.spawnType = SpawnType.UNIQUE;
+                                    rule.refillMode = RefillMode.AFTER_DEATH;
+                                    rule.spawnMode = MobRule.SPAWN_MODE_BOSS_ROOM;
+                                    rule.spawnTrigger = MobRule.SPAWN_TRIGGER_AFTER_DEATH;
+                                    rule.allowSmallRoom = true;
+                                    rule.spawnCount = 1;
+                                    rule.maxAlive = 1;
+                                    rule.spreadSpawns = false;
+                                    rule.respawnAfterDeath = true;
+                                    rule.afterDeathDelaySeconds = 30;
+                                    try {
+                                        ZoneDefaults.validateMobRule(rule);
+                                        ZoneDefaults.normalizeMobRule(rule);
+                                    } catch (IllegalArgumentException ex) {
+                                        CommandFeedback.error(ctx.getSource(), ex.getMessage());
+                                        return 0;
+                                    }
+                                    storage.addZone(oz.get());
+                                    BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                                    CommandFeedback.send(ctx.getSource(), "Applied boss preset to rule '" + ruleId + "'.");
+                                    BridgeRuntimeReloadDispatcher.sendSavedHint(ctx.getSource());
+                                    return 1;
+                                })));
+    }
+
+    private static LiteralArgumentBuilder<ServerCommandSource> buildSetField(ZoneStorage storage) {
+        return literal("set")
+                .then(argument("zone", StringArgumentType.word())
+                        .then(argument("ruleId", StringArgumentType.word())
+                                .then(argument("field", StringArgumentType.word())
+                                        .then(argument("value", StringArgumentType.greedyString())
+                                                .executes(ctx -> {
+                                                    String zoneId = StringArgumentType.getString(ctx, "zone");
+                                                    String ruleId = StringArgumentType.getString(ctx, "ruleId");
+                                                    String field = StringArgumentType.getString(ctx, "field").toLowerCase();
+                                                    String value = StringArgumentType.getString(ctx, "value");
+
+                                                    storage.reload();
+                                                    Optional<Zone> oz = storage.findZone(zoneId);
+                                                    if (oz.isEmpty()) {
+                                                        CommandFeedback.error(ctx.getSource(), "Zone not found.");
+                                                        return 0;
+                                                    }
+                                                    Optional<MobRule> or = findRule(oz.get(), ruleId);
+                                                    if (or.isEmpty()) {
+                                                        CommandFeedback.error(ctx.getSource(), "Mob rule not found: " + ruleId);
+                                                        return 0;
+                                                    }
+
+                                                    MobRule rule = or.get();
+                                                    try {
+                                                        applyField(rule, field, value);
+                                                        ZoneDefaults.validateMobRule(rule);
+                                                        ZoneDefaults.normalizeMobRule(rule);
+                                                    } catch (IllegalArgumentException ex) {
+                                                        CommandFeedback.error(ctx.getSource(), ex.getMessage());
+                                                        return 0;
+                                                    }
+
+                                                    storage.addZone(oz.get());
+                                                    BridgeRuntimeReloadDispatcher.reloadIfPresent();
+                                                    CommandFeedback.send(ctx.getSource(), "Set " + field + "=" + value + " for rule '" + ruleId + "'.");
+                                                    BridgeRuntimeReloadDispatcher.sendSavedHint(ctx.getSource());
+                                                    return 1;
+                                                })))));
+    }
+
+    private static void applyField(MobRule rule, String field, String value) {
+        switch (field) {
+            case "entity" -> rule.entity = value;
+            case "maxalive" -> rule.maxAlive = Integer.parseInt(value);
+            case "spawncount" -> rule.spawnCount = Integer.parseInt(value);
+            case "respawnseconds" -> rule.respawnSeconds = Integer.parseInt(value);
+            case "retryseconds" -> rule.failedSpawnRetrySeconds = Integer.parseInt(value);
+            case "chance" -> rule.chance = Double.parseDouble(value);
+            case "enabled" -> rule.enabled = Boolean.parseBoolean(value);
+            case "despawn" -> rule.despawnWhenZoneInactive = Boolean.parseBoolean(value);
+            case "announce" -> rule.announceOnSpawn = Boolean.parseBoolean(value);
+            case "spawnmode" -> rule.spawnMode = value.toUpperCase();
+            case "spawntrigger" -> rule.spawnTrigger = value.toUpperCase();
+            case "afterdeathdelay" -> rule.afterDeathDelaySeconds = Integer.parseInt(value);
+            case "respawnafterdeath" -> rule.respawnAfterDeath = Boolean.parseBoolean(value);
+            case "respawnafterdespawn" -> rule.respawnAfterDespawn = Boolean.parseBoolean(value);
+            case "allowsmallroom" -> rule.allowSmallRoom = Boolean.parseBoolean(value);
+            case "positionattempts" -> rule.positionAttempts = Integer.parseInt(value);
+            case "mindistance" -> rule.minDistanceBetweenSpawns = Integer.parseInt(value);
+            case "spreadspawns" -> rule.spreadSpawns = Boolean.parseBoolean(value);
+            case "requireplayer" -> rule.requirePlayerNearby = Boolean.parseBoolean(value);
+            case "playerrange" -> rule.playerActivationRange = Integer.parseInt(value);
+            case "requirechunk" -> rule.requireChunkLoaded = Boolean.parseBoolean(value);
+            case "allowforceload" -> rule.allowForceLoad = Boolean.parseBoolean(value);
+            case "fixedx" -> rule.fixedX = value.isBlank() ? null : Integer.parseInt(value);
+            case "fixedy" -> rule.fixedY = value.isBlank() ? null : Integer.parseInt(value);
+            case "fixedz" -> rule.fixedZ = value.isBlank() ? null : Integer.parseInt(value);
+            default -> throw new IllegalArgumentException("Unknown field: " + field);
+        }
+    }
+
     private static LiteralArgumentBuilder<ServerCommandSource> buildCompanionRoot(ZoneStorage storage) {
         return literal("companion")
                 .then(literal("add")
@@ -259,14 +485,15 @@ public final class ZoneMobCommand {
                                                                 .then(argument("radius", IntegerArgumentType.integer(1))
                                                                         .then(argument("chance", DoubleArgumentType.doubleArg(0.0, 1.0))
                                                                                 .executes(ctx -> {
-                                                                                    String zoneId = StringArgumentType.getString(ctx, "zone");
-                                                                                    String ruleId = StringArgumentType.getString(ctx, "ruleId");
-                                                                                    String companionId = StringArgumentType.getString(ctx, "companionId");
-                                                                                    Identifier entity = IdentifierArgumentType.getIdentifier(ctx, "entity");
-                                                                                    int count = IntegerArgumentType.getInteger(ctx, "count");
-                                                                                    int radius = IntegerArgumentType.getInteger(ctx, "radius");
-                                                                                    double chance = DoubleArgumentType.getDouble(ctx, "chance");
-                                                                                    return upsertCompanion(ctx.getSource(), storage, zoneId, ruleId, companionId, entity.toString(), count, radius, chance);
+                                                                    storage.reload();
+                                                                    String zoneId = StringArgumentType.getString(ctx, "zone");
+                                                                    String ruleId = StringArgumentType.getString(ctx, "ruleId");
+                                                                    String companionId = StringArgumentType.getString(ctx, "companionId");
+                                                                    Identifier entity = IdentifierArgumentType.getIdentifier(ctx, "entity");
+                                                                    int count = IntegerArgumentType.getInteger(ctx, "count");
+                                                                    int radius = IntegerArgumentType.getInteger(ctx, "radius");
+                                                                    double chance = DoubleArgumentType.getDouble(ctx, "chance");
+                                                                    return upsertCompanion(ctx.getSource(), storage, zoneId, ruleId, companionId, entity.toString(), count, radius, chance);
                                                                                 })))))))))
                 .then(literal("remove")
                         .then(argument("zone", StringArgumentType.word())
@@ -289,6 +516,7 @@ public final class ZoneMobCommand {
     }
 
     private static int upsertCompanion(ServerCommandSource source, ZoneStorage storage, String zoneId, String ruleId, String companionId, String entity, int count, int radius, double chance) {
+        storage.reload();
         Optional<Zone> oz = storage.findZone(zoneId);
         if (oz.isEmpty()) { CommandFeedback.error(source, "Zone not found: " + zoneId); return 0; }
         Optional<MobRule> or = findRule(oz.get(), ruleId);
@@ -334,6 +562,7 @@ public final class ZoneMobCommand {
     }
 
     private static int removeCompanion(ServerCommandSource source, ZoneStorage storage, String zoneId, String ruleId, String companionId) {
+        storage.reload();
         Optional<Zone> oz = storage.findZone(zoneId);
         if (oz.isEmpty()) { CommandFeedback.error(source, "Zone not found: " + zoneId); return 0; }
         Optional<MobRule> or = findRule(oz.get(), ruleId);
