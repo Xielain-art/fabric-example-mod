@@ -6,22 +6,24 @@ import net.minecraft.client.gui.DrawContext;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * @deprecated Use AdaptiveLayout and ScreenTheme instead.
+ */
+@Deprecated
 public final class ScreenLayout {
     private ScreenLayout() {
     }
 
     public static int panelWidth(int screenWidth, int preferredWidth) {
-        return Math.max(280, Math.min(preferredWidth, screenWidth - 32));
+        return AdaptiveLayout.panelWidth(screenWidth, preferredWidth);
     }
 
     public static int panelLeft(int screenWidth, int panelWidth) {
-        return (screenWidth - panelWidth) / 2;
+        return AdaptiveLayout.panelLeft(screenWidth, panelWidth);
     }
 
     public static void drawPanel(DrawContext context, int left, int top, int width, int bottom) {
-        int padding = 12;
-        context.fill(left - padding, top, left + width + padding, bottom, 0x88000000);
-        context.fill(left - padding, top, left + width + padding, top + 2, 0xFF3ECF8E);
+        ScreenTheme.drawPanel(context, left, top, width, bottom - top);
     }
 
     public static void drawWrapped(DrawContext context, TextRenderer textRenderer, String text, int x, int y, int maxWidth, int color) {
