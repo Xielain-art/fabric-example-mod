@@ -24,7 +24,7 @@ public abstract class GerbariumScreen extends Screen {
     }
 
     @Override
-    protected final void init() {
+    protected void init() {
         computeLayout();
         clearChildren();
         initHeader();
@@ -50,6 +50,10 @@ public abstract class GerbariumScreen extends Screen {
         if (helpTopic != null) {
             addDrawableChild(new HelpButton(panelX + panelW - 28, panelY + 14, helpTopic));
         }
+    }
+
+    public void setHelpTopic(HelpTopic topic) {
+        this.helpTopic = topic;
     }
 
     protected abstract void initContent();
