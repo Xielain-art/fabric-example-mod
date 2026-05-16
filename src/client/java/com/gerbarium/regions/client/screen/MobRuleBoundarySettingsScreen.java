@@ -1,10 +1,10 @@
 package com.gerbarium.regions.client.screen;
 
 import com.gerbarium.regions.client.network.GerbariumClientNetworking;
+import com.gerbarium.regions.client.screen.help.HelpTopic;
 import com.gerbarium.regions.model.MobRule;
 import com.gerbarium.regions.model.ZoneDefaults;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
@@ -12,7 +12,7 @@ import net.minecraft.text.Text;
 
 import java.util.List;
 
-public class MobRuleBoundarySettingsScreen extends Screen {
+public class MobRuleBoundarySettingsScreen extends GerbariumScreen {
     private final MobRule draft;
     private final MobRuleEditScreen parent;
     private String error = "";
@@ -23,7 +23,7 @@ public class MobRuleBoundarySettingsScreen extends Screen {
     private TextFieldWidget intervalField;
 
     public MobRuleBoundarySettingsScreen(MobRuleEditScreen parent, MobRule draft) {
-        super(Text.literal("Boundary Control"));
+        super(Text.literal("Boundary Control"), 460, HelpTopic.MOB_RULE_BOUNDARY);
         this.parent = parent;
         this.draft = draft;
         if (!ZoneDefaults.isValidBoundaryMode(this.draft.boundaryMode)) {
@@ -37,51 +37,36 @@ public class MobRuleBoundarySettingsScreen extends Screen {
     }
 
     @Override
-    protected void init() {
-        clearChildren();
-
-        int panelWidth = ScreenLayout.panelWidth(width, 460);
-        int startX = ScreenLayout.panelLeft(width, panelWidth);
-        int topY = 52;
+    protected void initContent() {
+        AdaptiveLayout.ColumnMetrics cols = AdaptiveLayout.twoColumn(panelW, ScreenTheme.SPACE_LG);
+        int col1W = cols.col1Width();
+        int col2X = contentX + cols.col2Offset();
+        int y = contentY + 10;
 
         modeButton = addDrawableChild(CyclingButtonWidget.<String>builder(Text::literal)
                 .values(List.of(MobRule.BOUNDARY_NONE, MobRule.BOUNDARY_LEASH, MobRule.BOUNDARY_TELEPORT_BACK, MobRule.BOUNDARY_REMOVE_OUTSIDE))
                 .initially(draft.boundaryMode)
-                .build(startX, topY, panelWidth, 20, Text.literal("Boundary Mode"), (b, v) -> {
+                .build(contentX, y, contentW, 20, Text.literal("Boundary Mode"), (b, v) -> {
                     draft.boundaryMode = v;
                     updateInfo();
                 }));
+        y += 40;
 
-        int y2 = topY + 36;
-        int half = (panelWidth - 10) / 2;
-        maxOutsideField = field(startX, y2, half, String.valueOf(draft.boundaryMaxOutsideSeconds));
-        intervalField = field(startX + half + 10, y2, half, String.valueOf(draft.boundaryCheckIntervalTicks));
-        addDrawableChild(maxOutsideField);
-        addDrawableChild(intervalField);
+        maxOutsideField = addField(contentX, y, col1W, String.valueOf(draft.boundaryMaxOutsideSeconds));
+        intervalField = addField(col2X, y, col1W, String.valueOf(draft.boundaryCheckIntervalTicks));
+        y += 40;
 
-        int y3 = y2 + 36;
         teleportBackButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.boundaryTeleportBack)
-                .build(startX, y3, 160, 20, Text.literal("Teleport Back"), (b, v) -> draft.boundaryTeleportBack = v));
-
-        if (panelWidth >= 380) {
-            addDrawableChild(ButtonWidget.builder(Text.literal("Save"), b -> save())
-                    .dimensions(startX, height - 35, 180, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> client.setScreen(parent))
-                    .dimensions(startX + 190, height - 35, 180, 20).build());
-        } else {
-            addDrawableChild(ButtonWidget.builder(Text.literal("Save"), b -> save())
-                    .dimensions(startX, height - 58, panelWidth, 20).build());
-            addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> client.setScreen(parent))
-                    .dimensions(startX, height - 35, panelWidth, 20).build());
-        }
+                .build(contentX, y, col1W, 20, Text.literal("Teleport Back"), (b, v) -> draft.boundaryTeleportBack = v));
 
         updateInfo();
     }
 
-    private TextFieldWidget field(int x, int y, int w, String value) {
-        TextFieldWidget field = new TextFieldWidget(textRenderer, x, y, w, 20, Text.literal(""));
-        field.setText(value == null ? "" : value);
-        return field;
+    private TextFieldWidget addField(int x, int y, int w, String value) {
+        TextFieldWidget f = new TextFieldWidget(textRenderer, x, y, w, 20, Text.literal(""));
+        f.setText(value == null ? "" : value);
+        addDrawableChild(f);
+        return f;
     }
 
     private void updateInfo() {
@@ -97,27 +82,25 @@ public class MobRuleBoundarySettingsScreen extends Screen {
         }
     }
 
+    @Override
+    protected void initFooter() {
+        AdaptiveLayout.ColumnMetrics cols = AdaptiveLayout.twoColumn(panelW, ScreenTheme.SPACE_LG);
+        addDrawableChild(ButtonWidget.builder(Text.literal("Save"), b -> save())
+                .dimensions(contentX, footerY, cols.col1Width(), 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> client.setScreen(parent))
+                .dimensions(contentX + cols.col2Offset(), footerY, cols.col1Width(), 20).build());
+    }
+
     private void capture() {
-        if (modeButton != null) {
-            draft.boundaryMode = modeButton.getValue();
-        }
-        if (maxOutsideField != null) {
-            draft.boundaryMaxOutsideSeconds = parseInt(maxOutsideField, draft.boundaryMaxOutsideSeconds);
-        }
-        if (intervalField != null) {
-            draft.boundaryCheckIntervalTicks = parseInt(intervalField, draft.boundaryCheckIntervalTicks);
-        }
-        if (teleportBackButton != null) {
-            draft.boundaryTeleportBack = teleportBackButton.getValue();
-        }
+        if (modeButton != null) draft.boundaryMode = modeButton.getValue();
+        if (maxOutsideField != null) draft.boundaryMaxOutsideSeconds = parseInt(maxOutsideField, draft.boundaryMaxOutsideSeconds);
+        if (intervalField != null) draft.boundaryCheckIntervalTicks = parseInt(intervalField, draft.boundaryCheckIntervalTicks);
+        if (teleportBackButton != null) draft.boundaryTeleportBack = teleportBackButton.getValue();
     }
 
     private int parseInt(TextFieldWidget field, int fallback) {
-        try {
-            return Integer.parseInt(field.getText().trim());
-        } catch (Exception e) {
-            return fallback;
-        }
+        try { return Integer.parseInt(field.getText().trim()); }
+        catch (Exception e) { return fallback; }
     }
 
     private void save() {
@@ -135,40 +118,24 @@ public class MobRuleBoundarySettingsScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        renderBackground(context);
-
-        int panelWidth = ScreenLayout.panelWidth(width, 460);
-        int startX = ScreenLayout.panelLeft(width, panelWidth);
-        ScreenLayout.drawPanel(context, startX, 20, panelWidth, height - 20);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 10, 0xFFFFFF);
-        context.drawTextWithShadow(textRenderer, "Boundary settings only. No runtime behavior here.", startX, 31, 0xA5FFB5);
-        context.drawTextWithShadow(textRenderer, "Mode", startX, 41, 0xA5FFB5);
-        context.drawTextWithShadow(textRenderer, "Max Outside Seconds", startX, 77, 0xA5FFB5);
-        context.drawTextWithShadow(textRenderer, "Check Interval Ticks", startX + (panelWidth - 10) / 2 + 10, 77, 0xA5FFB5);
-        context.drawTextWithShadow(textRenderer, "Teleport Back", startX, 113, 0xA5FFB5);
-
-        int helpY = panelWidth >= 380 ? height - 74 : height - 104;
-        ScreenLayout.drawWrapped(context, textRenderer, explainMode(modeButton == null ? draft.boundaryMode : modeButton.getValue()), startX, helpY, panelWidth, 0xCCCCCC);
-        if (!info.isBlank()) {
-            ScreenLayout.drawWrapped(context, textRenderer, info, startX, helpY + 22, panelWidth, 0xAAAAAA);
-        }
-        if (!error.isBlank()) {
-            ScreenLayout.drawWrapped(context, textRenderer, error, startX, helpY + 44, panelWidth, 0xFF5555);
-        }
-
         super.render(context, mouseX, mouseY, delta);
-    }
 
-    private String explainMode(String mode) {
-        if (MobRule.BOUNDARY_REMOVE_OUTSIDE.equals(mode)) {
-            return "REMOVE_OUTSIDE: Mob will be removed if it stays outside too long. Runtime should not count this as a normal death.";
+        AdaptiveLayout.ColumnMetrics cols = AdaptiveLayout.twoColumn(panelW, ScreenTheme.SPACE_LG);
+        int col2X = contentX + cols.col2Offset();
+        int y = contentY + 10;
+
+        context.drawTextWithShadow(textRenderer, "Boundary Mode", contentX, y - 11, ScreenTheme.TEXT_SECONDARY);
+        y += 40;
+        context.drawTextWithShadow(textRenderer, "Max Outside Seconds", contentX, y - 11, ScreenTheme.TEXT_SECONDARY);
+        context.drawTextWithShadow(textRenderer, "Check Interval Ticks", col2X, y - 11, ScreenTheme.TEXT_SECONDARY);
+        y += 40;
+        context.drawTextWithShadow(textRenderer, "Teleport Back", contentX, y - 11, ScreenTheme.TEXT_SECONDARY);
+
+        // Info text
+        int infoY = footerY - 50;
+        ScreenLayout.drawWrapped(context, textRenderer, info, contentX, infoY, contentW, ScreenTheme.WARNING);
+        if (!error.isBlank()) {
+            ScreenLayout.drawWrapped(context, textRenderer, error, contentX, infoY + 20, contentW, ScreenTheme.ERROR);
         }
-        if (MobRule.BOUNDARY_NONE.equals(mode)) {
-            return "NONE: Mob can leave the zone.";
-        }
-        if (MobRule.BOUNDARY_TELEPORT_BACK.equals(mode)) {
-            return "TELEPORT_BACK: Mob will be teleported back inside the zone.";
-        }
-        return "LEASH: Mob will be returned if it stays outside the zone too long.";
     }
 }
