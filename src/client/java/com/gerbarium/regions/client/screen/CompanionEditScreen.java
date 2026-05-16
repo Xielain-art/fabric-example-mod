@@ -1,28 +1,28 @@
 package com.gerbarium.regions.client.screen;
 
+import com.gerbarium.regions.client.screen.help.HelpTopic;
 import com.gerbarium.regions.model.CompanionRule;
 import com.gerbarium.regions.model.ZoneDefaults;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 
-public class CompanionEditScreen extends Screen implements EntitySelectionConsumer {
+public class CompanionEditScreen extends GerbariumScreen implements EntitySelectionConsumer {
     private final CompanionListScreen parent;
     private final int editIndex;
     private final CompanionRule draft;
     private String error = "";
     private boolean advancedView = false;
 
-    private TextFieldWidget idField;
+    private TextFieldWidget nameField;
     private TextFieldWidget entityField;
     private TextFieldWidget countField;
     private TextFieldWidget radiusField;
     private TextFieldWidget chanceField;
 
     public CompanionEditScreen(CompanionListScreen parent, CompanionRule existing, int editIndex) {
-        super(Text.literal(existing == null ? "Add Companion" : "Edit Companion"));
+        super(Text.literal(existing == null ? "Add Companion" : "Edit Companion"), 420, HelpTopic.COMPANION_EDIT);
         this.parent = parent;
         this.editIndex = editIndex;
         this.draft = existing == null ? new CompanionRule() : copy(existing);
@@ -35,56 +35,50 @@ public class CompanionEditScreen extends Screen implements EntitySelectionConsum
     }
 
     @Override
-    protected void init() {
-        clearChildren();
+    protected void initContent() {
+        int col3W = Math.max(80, (contentW - 16) / 3);
+        int y = contentY;
 
-        int formWidth = ScreenLayout.panelWidth(width, 420);
-        int startX = ScreenLayout.panelLeft(width, formWidth);
-        int yOffset = 45;
-        int rowSpacing = 40;
-
-        idField = field(startX, yOffset, Math.max(120, formWidth - 100), draft.name == null ? "" : draft.name);
-        addDrawableChild(idField);
+        // Row 1: Name + Advanced toggle
+        nameField = addField(contentX, y, Math.max(180, contentW - 100), draft.name == null ? "" : draft.name);
         addDrawableChild(ButtonWidget.builder(Text.literal(advancedView ? "Advanced: On" : "Advanced: Off"), b -> {
             advancedView = !advancedView;
             init();
-        }).dimensions(startX + Math.max(124, formWidth - 96), yOffset, 92, 20).build());
+        }).dimensions(contentX + Math.max(184, contentW - 96), y, 92, 20).build());
+        y += 40;
 
-        yOffset += rowSpacing;
-        entityField = field(startX, yOffset, Math.max(120, formWidth - 100), draft.entity);
-        addDrawableChild(entityField);
+        // Row 2: Entity + Pick
+        entityField = addField(contentX, y, Math.max(180, contentW - 100), draft.entity);
         addDrawableChild(ButtonWidget.builder(Text.literal("Pick Entity"), b -> {
             capture();
             client.setScreen(new EntityPickerScreen(this, this, draft.entity));
-        }).dimensions(startX + Math.max(124, formWidth - 96), yOffset, 92, 20).build());
+        }).dimensions(contentX + Math.max(184, contentW - 96), y, 92, 20).build());
+        y += 40;
 
-        yOffset += rowSpacing;
-        int col1 = Math.max(80, (formWidth - 8) / 3);
-        int col2 = Math.max(80, (formWidth - 8) / 3);
-        int col3 = Math.max(80, formWidth - col1 - col2 - 8);
-
-        countField = field(startX, yOffset, col1, String.valueOf(draft.count));
-        radiusField = field(startX + col1 + 4, yOffset, col2, String.valueOf(draft.radius));
-        chanceField = field(startX + col1 + col2 + 8, yOffset, col3, String.valueOf(draft.chance));
-        addDrawableChild(countField);
-        addDrawableChild(radiusField);
-        addDrawableChild(chanceField);
-
-        int footerY = height - 35;
-        addDrawableChild(ButtonWidget.builder(Text.literal("Save"), b -> save())
-                .dimensions(startX, footerY, formWidth / 2 - 4, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Cancel"), b -> client.setScreen(parent))
-                .dimensions(startX + formWidth / 2 + 4, footerY, formWidth / 2 - 4, 20).build());
+        // Row 3: Count, Radius, Chance
+        countField = addField(contentX, y, col3W, String.valueOf(draft.count));
+        radiusField = addField(contentX + col3W + ScreenTheme.SPACE_SM, y, col3W, String.valueOf(draft.radius));
+        chanceField = addField(contentX + (col3W + ScreenTheme.SPACE_SM) * 2, y, col3W, String.valueOf(draft.chance));
     }
 
-    private TextFieldWidget field(int x, int y, int w, String value) {
-        TextFieldWidget field = new TextFieldWidget(textRenderer, x, y, w, 20, Text.literal(""));
-        field.setText(value == null ? "" : value);
-        return field;
+    private TextFieldWidget addField(int x, int y, int w, String value) {
+        TextFieldWidget f = new TextFieldWidget(textRenderer, x, y, w, 20, Text.literal(""));
+        f.setText(value == null ? "" : value);
+        addDrawableChild(f);
+        return f;
+    }
+
+    @Override
+    protected void initFooter() {
+        AdaptiveLayout.ColumnMetrics cols = AdaptiveLayout.twoColumn(panelW, ScreenTheme.SPACE_LG);
+        addDrawableChild(ButtonWidget.builder(Text.literal("Save"), b -> save())
+                .dimensions(contentX, footerY, cols.col1Width(), 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Cancel"), b -> client.setScreen(parent))
+                .dimensions(contentX + cols.col2Offset(), footerY, cols.col1Width(), 20).build());
     }
 
     private void capture() {
-        draft.name = idField.getText().trim();
+        draft.name = nameField.getText().trim();
         draft.entity = entityField.getText().trim();
         draft.count = parseInt(countField, draft.count);
         draft.radius = parseInt(radiusField, draft.radius);
@@ -120,31 +114,26 @@ public class CompanionEditScreen extends Screen implements EntitySelectionConsum
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        renderBackground(context);
+        super.render(context, mouseX, mouseY, delta);
 
-        int formWidth = ScreenLayout.panelWidth(width, 420);
-        int startX = ScreenLayout.panelLeft(width, formWidth);
-        ScreenLayout.drawPanel(context, startX, 15, formWidth, height - 15);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 15, 0xFFFFFF);
+        int col3W = Math.max(80, (contentW - 16) / 3);
+        int y = contentY;
 
-        int yOffset = 45;
-        context.drawTextWithShadow(textRenderer, "Companion Name", startX, yOffset - 11, 0xA5FFB5);
-        yOffset += 40;
-        context.drawTextWithShadow(textRenderer, "Entity", startX, yOffset - 11, 0xA5FFB5);
-        yOffset += 40;
-        context.drawTextWithShadow(textRenderer, "Count", startX, yOffset - 11, 0xA5FFB5);
-        context.drawTextWithShadow(textRenderer, "Radius", startX + Math.max(80, (formWidth - 8) / 3) + 4, yOffset - 11, 0xA5FFB5);
-        context.drawTextWithShadow(textRenderer, "Chance", startX + (Math.max(80, (formWidth - 8) / 3) * 2) + 8, yOffset - 11, 0xA5FFB5);
+        context.drawTextWithShadow(textRenderer, "Companion Name", contentX, y - 11, ScreenTheme.TEXT_SECONDARY);
+        y += 40;
+        context.drawTextWithShadow(textRenderer, "Entity", contentX, y - 11, ScreenTheme.TEXT_SECONDARY);
+        y += 40;
+        context.drawTextWithShadow(textRenderer, "Count", contentX, y - 11, ScreenTheme.TEXT_SECONDARY);
+        context.drawTextWithShadow(textRenderer, "Radius", contentX + col3W + ScreenTheme.SPACE_SM, y - 11, ScreenTheme.TEXT_SECONDARY);
+        context.drawTextWithShadow(textRenderer, "Chance", contentX + (col3W + ScreenTheme.SPACE_SM) * 2, y - 11, ScreenTheme.TEXT_SECONDARY);
 
         if (advancedView) {
-            context.drawTextWithShadow(textRenderer, "ID: " + (draft.id == null ? "" : draft.id), startX, yOffset + 30, 0x888888);
+            context.drawTextWithShadow(textRenderer, "ID: " + (draft.id == null ? "" : draft.id), contentX, y + 30, ScreenTheme.TEXT_MUTED);
         }
 
         if (!error.isBlank()) {
-            context.drawCenteredTextWithShadow(textRenderer, error, width / 2, height - 55, 0xFF5555);
+            context.drawCenteredTextWithShadow(textRenderer, error, width / 2, footerY - 20, ScreenTheme.ERROR);
         }
-
-        super.render(context, mouseX, mouseY, delta);
     }
 
     private static CompanionRule copy(CompanionRule src) {
