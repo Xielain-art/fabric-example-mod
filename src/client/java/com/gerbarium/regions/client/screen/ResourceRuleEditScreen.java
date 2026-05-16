@@ -1,6 +1,7 @@
 package com.gerbarium.regions.client.screen;
 
 import com.gerbarium.regions.client.network.GerbariumClientNetworking;
+import com.gerbarium.regions.client.screen.help.HelpTopic;
 import com.gerbarium.regions.model.PlacementMode;
 import com.gerbarium.regions.model.ReplaceMode;
 import com.gerbarium.regions.model.ResourceActivationMode;
@@ -20,7 +21,7 @@ import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ResourceRuleEditScreen extends Screen implements BlockSelectionConsumer {
+public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSelectionConsumer {
     private static final int PAGE_COUNT = 5;
 
     private final String zoneId;
@@ -64,7 +65,7 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
     private BlockPickTarget blockPickTarget = BlockPickTarget.RESOURCE;
 
     public ResourceRuleEditScreen(String zoneId, ResourceRule existingRule, Screen parent) {
-        super(Text.literal(existingRule == null ? "Add Resource Rule" : "Edit Resource Rule"));
+        super(Text.literal(existingRule == null ? "Add Resource Rule" : "Edit Resource Rule"), 700, null);
         this.zoneId = zoneId;
         this.parent = parent;
         this.isEditing = existingRule != null;
@@ -78,67 +79,64 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
 
     @Override
     protected void init() {
-        clearChildren();
         page = Math.max(0, Math.min(page, PAGE_COUNT - 1));
-
-        int panelWidth = ScreenLayout.panelWidth(width, 700);
-        int startX = ScreenLayout.panelLeft(width, panelWidth);
-        int topY = contentTopY();
-
-        addPageNav(startX, panelWidth);
-
-        if (page == 0) {
-            addBasicsPage(startX, topY, panelWidth);
-        } else if (page == 1) {
-            addTargetBlocksPage(startX, topY, panelWidth);
-        } else if (page == 2) {
-            addResourceBlocksPage(startX, topY, panelWidth);
-        } else if (page == 3) {
-            addLimitsPage(startX, topY, panelWidth);
-        } else if (page == 4) {
-            addSafetyPage(startX, topY, panelWidth);
-        }
-
-        int footerY = height - 35;
-        addDrawableChild(ButtonWidget.builder(Text.literal("Save"), b -> save())
-                .dimensions(startX, footerY, panelWidth / 2 - 4, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> client.setScreen(parent))
-                .dimensions(startX + panelWidth / 2 + 4, footerY, panelWidth / 2 - 4, 20).build());
+        updateHelpTopic();
+        super.init();
     }
 
-    private void addPageNav(int startX, int panelWidth) {
-        int pagY = 24;
-        int buttonW = 72;
-        int labelW = 120;
-        int totalW = buttonW * 2 + labelW + 24;
-        int pagX = startX + panelWidth - totalW;
+    private void updateHelpTopic() {
+        HelpTopic topic = switch (page) {
+            case 0 -> HelpTopic.RESOURCE_RULE_BASICS;
+            case 1, 2 -> HelpTopic.RESOURCE_RULE_BLOCKS;
+            case 3 -> HelpTopic.RESOURCE_RULE_LIMITS;
+            default -> HelpTopic.RESOURCE_RULE_SAFETY;
+        };
+        setHelpTopic(topic);
+    }
+
+    @Override
+    protected void initHeader() {
+        int pagY = panelY + 14;
+        int buttonW = 64;
+        int labelW = 100;
+        int totalW = buttonW * 2 + labelW + 16;
+        int pagX = panelX + panelW - totalW - (helpTopic != null ? 28 : 0);
 
         addDrawableChild(ButtonWidget.builder(Text.literal("<"), b -> { capture(); page = Math.max(0, page - 1); init(); })
-                .dimensions(pagX, pagY, buttonW, 20).build());
+                .dimensions(pagX, pagY, buttonW, 18).build());
         addDrawableChild(ButtonWidget.builder(Text.literal(pageLabel()), b -> {})
-                .dimensions(pagX + buttonW + 4, pagY, labelW, 20).build());
+                .dimensions(pagX + buttonW + 4, pagY, labelW, 18).build());
         addDrawableChild(ButtonWidget.builder(Text.literal(">"), b -> { capture(); page = Math.min(PAGE_COUNT - 1, page + 1); init(); })
-                .dimensions(pagX + buttonW + 4 + labelW + 4, pagY, buttonW, 20).build());
+                .dimensions(pagX + buttonW + 4 + labelW + 4, pagY, buttonW, 18).build());
+
+        super.initHeader();
     }
 
-    private String pageLabel() {
-        return switch (page) {
-            case 0 -> "Basics 1/5";
-            case 1 -> "Targets 2/5";
-            case 2 -> "Resources 3/5";
-            case 3 -> "Limits 4/5";
-            default -> "Safety 5/5";
-        };
+    @Override
+    protected void initContent() {
+        int topY = contentY;
+
+        if (page == 0) {
+            addBasicsPage(contentX, topY);
+        } else if (page == 1) {
+            addTargetBlocksPage(contentX, topY);
+        } else if (page == 2) {
+            addResourceBlocksPage(contentX, topY);
+        } else if (page == 3) {
+            addLimitsPage(contentX, topY);
+        } else if (page == 4) {
+            addSafetyPage(contentX, topY);
+        }
     }
 
-    private void addBasicsPage(int startX, int topY, int panelWidth) {
+    private void addBasicsPage(int startX, int topY) {
         int rowH = 40;
 
-        idField = field(startX, topY, panelWidth, draft.id == null ? "" : draft.id);
+        idField = field(startX, topY, contentW, draft.id == null ? "" : draft.id);
         idField.setEditable(false);
         addDrawableChild(idField);
 
-        nameField = field(startX, topY + rowH, panelWidth, draft.name == null ? "" : draft.name);
+        nameField = field(startX, topY + rowH, contentW, draft.name == null ? "" : draft.name);
         addDrawableChild(nameField);
 
         enabledButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.enabled)
@@ -150,8 +148,8 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
                 .build(startX, topY + rowH * 3, 240, 20, Text.literal("Activation Mode"), (b, v) -> {}));
     }
 
-    private void addTargetBlocksPage(int startX, int topY, int panelWidth) {
-        int fieldW = Math.max(160, panelWidth - 172);
+    private void addTargetBlocksPage(int startX, int topY) {
+        int fieldW = Math.max(160, contentW - 172);
         int rowH = 28;
 
         addTargetField = field(startX, topY, fieldW, targetInput);
@@ -177,11 +175,11 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
             if (!draft.targetBlocks.isEmpty()) {
                 draft.targetBlocks.remove(draft.targetBlocks.size() - 1);
             }
-        }).dimensions(startX, topY + rowH, panelWidth, 20).build());
+        }).dimensions(startX, topY + rowH, contentW, 20).build());
     }
 
-    private void addResourceBlocksPage(int startX, int topY, int panelWidth) {
-        int blockFieldW = Math.max(160, panelWidth - 224);
+    private void addResourceBlocksPage(int startX, int topY) {
+        int blockFieldW = Math.max(160, contentW - 224);
         int rowH = 28;
 
         addResourceBlockField = field(startX, topY, blockFieldW, resourceInput);
@@ -209,17 +207,17 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
             } else {
                 error = "Block ID must be namespace:path, weight > 0";
             }
-        }).dimensions(startX + blockFieldW + 122, topY, panelWidth - blockFieldW - 122, 20).build());
+        }).dimensions(startX + blockFieldW + 122, topY, contentW - blockFieldW - 122, 20).build());
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Remove Last Resource"), b -> {
             if (!draft.resourceBlocks.isEmpty()) {
                 draft.resourceBlocks.remove(draft.resourceBlocks.size() - 1);
             }
-        }).dimensions(startX, topY + rowH, panelWidth, 20).build());
+        }).dimensions(startX, topY + rowH, contentW, 20).build());
     }
 
-    private void addLimitsPage(int startX, int topY, int panelWidth) {
-        int half = (panelWidth - 10) / 2;
+    private void addLimitsPage(int startX, int topY) {
+        int half = (contentW - 10) / 2;
         int rowH = compactRowH();
 
         maxActiveField = field(startX, topY, half, String.valueOf(draft.maxActiveBlocks));
@@ -262,7 +260,7 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
         }
     }
 
-    private void addSafetyPage(int startX, int topY, int panelWidth) {
+    private void addSafetyPage(int startX, int topY) {
         int rowH = compactRowH();
 
         restoreDelayField = field(startX, topY, 180, String.valueOf(draft.restoreDelaySeconds));
@@ -285,10 +283,6 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
                 .build(startX, toggleY + rowH * 5, 220, 20, Text.literal("Allow Block Entities"), (b, v) -> {}));
     }
 
-    private int contentTopY() {
-        return height < 220 ? 48 : 56;
-    }
-
     private int compactRowH() {
         return height < 220 ? 24 : 32;
     }
@@ -306,19 +300,24 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
 
     private Integer parseNullableInt(TextFieldWidget f, Integer fallback) {
         String value = f.getText().trim();
-        if (value.isEmpty()) {
-            return null;
-        }
-        try {
-            return Integer.parseInt(value);
-        } catch (Exception e) {
-            return fallback;
-        }
+        if (value.isEmpty()) return null;
+        try { return Integer.parseInt(value); }
+        catch (Exception e) { return fallback; }
     }
 
     private double parseDouble(TextFieldWidget f, double fallback) {
         try { return Double.parseDouble(f.getText().trim()); }
         catch (Exception e) { return fallback; }
+    }
+
+    private String pageLabel() {
+        return switch (page) {
+            case 0 -> "Basics 1/5";
+            case 1 -> "Targets 2/5";
+            case 2 -> "Resources 3/5";
+            case 3 -> "Limits 4/5";
+            default -> "Safety 5/5";
+        };
     }
 
     private void capture() {
@@ -369,74 +368,69 @@ public class ResourceRuleEditScreen extends Screen implements BlockSelectionCons
     }
 
     @Override
+    protected void initFooter() {
+        addDrawableChild(ButtonWidget.builder(Text.literal("Save"), b -> save())
+                .dimensions(contentX, footerY, contentW / 2 - 4, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> client.setScreen(parent))
+                .dimensions(contentX + contentW / 2 + 4, footerY, contentW / 2 - 4, 20).build());
+    }
+
+    @Override
     public void onBlockSelected(String blockId) {
         if (blockPickTarget == BlockPickTarget.TARGET) {
             targetInput = blockId;
-            if (addTargetField != null) {
-                addTargetField.setText(blockId);
-            }
+            if (addTargetField != null) addTargetField.setText(blockId);
             return;
         }
         resourceInput = blockId;
-        if (addResourceBlockField != null) {
-            addResourceBlockField.setText(blockId);
-        }
+        if (addResourceBlockField != null) addResourceBlockField.setText(blockId);
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        renderBackground(context);
-
-        int panelWidth = ScreenLayout.panelWidth(width, 700);
-        int startX = ScreenLayout.panelLeft(width, panelWidth);
-        ScreenLayout.drawPanel(context, startX, 15, panelWidth, height - 15);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 8, 0xFFFFFF);
-
-        context.drawTextWithShadow(textRenderer, pageLabel(), startX, 31, 0xA5FFB5);
+        super.render(context, mouseX, mouseY, delta);
 
         if (page == 0) {
-            context.drawTextWithShadow(textRenderer, "Rule ID (read-only)", startX, 50, 0x888888);
-            context.drawTextWithShadow(textRenderer, "Name", startX, 90, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Enabled", startX, 130, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Activation Mode", startX + 150, 130, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Rule ID (read-only)", contentX, contentY - 11, ScreenTheme.TEXT_MUTED);
+            context.drawTextWithShadow(textRenderer, "Name", contentX, contentY + 40 - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Enabled", contentX, contentY + 80 - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Activation Mode", contentX + 150, contentY + 80 - 11, ScreenTheme.TEXT_SECONDARY);
         } else if (page == 1) {
-            context.drawTextWithShadow(textRenderer, "Target Blocks", startX, 50, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Target Blocks", contentX, contentY - 11, ScreenTheme.TEXT_SECONDARY);
             String targets = draft.targetBlocks.isEmpty() ? "(none)" : String.join(", ", draft.targetBlocks);
-            ScreenLayout.drawWrapped(context, textRenderer, targets, startX, 111, panelWidth, 0xCCCCCC);
+            ScreenLayout.drawWrapped(context, textRenderer, targets, contentX, contentY + 60, contentW, ScreenTheme.TEXT_SECONDARY);
         } else if (page == 2) {
-            context.drawTextWithShadow(textRenderer, "Resource Blocks", startX, 50, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Weight", startX + Math.max(160, panelWidth - 224) + 66, 50, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Resource Blocks", contentX, contentY - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Weight", contentX + Math.max(160, contentW - 224) + 66, contentY - 11, ScreenTheme.TEXT_SECONDARY);
             StringBuilder sb = new StringBuilder();
             for (WeightedBlock wb : draft.resourceBlocks) {
                 if (sb.length() > 0) sb.append(", ");
                 sb.append(wb.block).append(" x").append(wb.weight);
             }
-            ScreenLayout.drawWrapped(context, textRenderer, sb.length() == 0 ? "(none)" : sb.toString(), startX, 111, panelWidth, 0xCCCCCC);
+            ScreenLayout.drawWrapped(context, textRenderer, sb.length() == 0 ? "(none)" : sb.toString(), contentX, contentY + 60, contentW, ScreenTheme.TEXT_SECONDARY);
         } else if (page == 3) {
-            int half = (panelWidth - 10) / 2;
-            int topY = contentTopY();
+            int half = (contentW - 10) / 2;
+            int topY = contentY;
             int rowH = compactRowH();
-            context.drawTextWithShadow(textRenderer, "Max Active Blocks", startX, topY - 6, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Spawn Count", startX + half + 10, topY - 6, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Respawn Seconds", startX, topY + rowH - 6, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Chance (0..1)", startX + half + 10, topY + rowH - 6, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Min Y (blank = zone min)", startX, topY + rowH * 2 - 6, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Max Y (blank = zone max)", startX + half + 10, topY + rowH * 2 - 6, 0xA5FFB5);
-            int spacingLabelY = height < 220 ? topY + rowH * 3 - 6 : topY + rowH * 5 - 12;
-            context.drawTextWithShadow(textRenderer, "Spacing", startX, spacingLabelY, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Max Active Blocks", contentX, topY - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Spawn Count", contentX + half + 10, topY - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Respawn Seconds", contentX, topY + rowH - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Chance (0..1)", contentX + half + 10, topY + rowH - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Min Y (blank = zone min)", contentX, topY + rowH * 2 - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Max Y (blank = zone max)", contentX + half + 10, topY + rowH * 2 - 11, ScreenTheme.TEXT_SECONDARY);
+            int spacingLabelY = height < 220 ? topY + rowH * 3 - 11 : topY + rowH * 5 - 12;
+            context.drawTextWithShadow(textRenderer, "Spacing", contentX, spacingLabelY, ScreenTheme.TEXT_SECONDARY);
             if (height >= 240) {
-                context.drawTextWithShadow(textRenderer, "RANDOM_SCATTER, min distance between resources.", startX, topY + rowH * 5 + 18, 0xAAAAAA);
+                context.drawTextWithShadow(textRenderer, "RANDOM_SCATTER, min distance between resources.", contentX, topY + rowH * 5 + 18, ScreenTheme.TEXT_MUTED);
             }
         } else if (page == 4) {
-            context.drawTextWithShadow(textRenderer, "Restore Delay Seconds", startX, 50, 0xA5FFB5);
-            context.drawTextWithShadow(textRenderer, "Max Position Attempts", startX + 200, 50, 0xA5FFB5);
+            context.drawTextWithShadow(textRenderer, "Restore Delay Seconds", contentX, contentY - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Max Position Attempts", contentX + 200, contentY - 11, ScreenTheme.TEXT_SECONDARY);
         }
 
         if (!error.isBlank()) {
-            ScreenLayout.drawWrapped(context, textRenderer, error, startX, height - 64, panelWidth, 0xFF5555);
+            ScreenLayout.drawWrapped(context, textRenderer, error, contentX, footerY - 24, contentW, ScreenTheme.ERROR);
         }
-
-        super.render(context, mouseX, mouseY, delta);
     }
 
     private static final Gson GSON = new Gson();
