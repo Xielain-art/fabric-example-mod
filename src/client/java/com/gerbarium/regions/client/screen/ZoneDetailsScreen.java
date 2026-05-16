@@ -108,26 +108,26 @@ public class ZoneDetailsScreen extends Screen implements GerbariumRefreshableScr
 
         int panelWidth = ScreenLayout.panelWidth(width, 680);
         int startX = ScreenLayout.panelLeft(width, panelWidth);
-        ScreenLayout.drawPanel(context, startX, 15, panelWidth, height - 15);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 23, 0xFFFFFF);
+        ScreenTheme.drawPanel(context, startX, 15, panelWidth, height - 15);
+        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 23, ScreenTheme.ACCENT_PRIMARY);
 
         Optional<Zone> oz = ClientGerbariumData.findZone(zoneId);
         if (oz.isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, "Zone not found", width / 2, height / 2 - 10, 0xFF5555);
+            context.drawCenteredTextWithShadow(textRenderer, "Zone not found", width / 2, height / 2 - 10, ScreenTheme.ERROR);
             super.render(context, mouseX, mouseY, delta);
             return;
         }
 
         Zone z = oz.get();
         ZoneDefaults.normalizeZone(z);
-        context.drawTextWithShadow(textRenderer, "Zone: " + z.id, startX + 12, 68, 0xFFFFFF);
-        context.drawTextWithShadow(textRenderer, "Dim: " + z.dimension, startX + panelWidth / 2, 68, 0xCCCCCC);
-        context.drawTextWithShadow(textRenderer, "Min: " + z.min.x + " " + z.min.y + " " + z.min.z, startX + 12, 84, 0xAAAAAA);
-        context.drawTextWithShadow(textRenderer, "Max: " + z.max.x + " " + z.max.y + " " + z.max.z, startX + panelWidth / 2, 84, 0xAAAAAA);
+        context.drawTextWithShadow(textRenderer, "Zone: " + z.id, startX + 12, 68, ScreenTheme.TEXT_PRIMARY);
+        context.drawTextWithShadow(textRenderer, "Dim: " + z.dimension, startX + panelWidth / 2, 68, ScreenTheme.TEXT_SECONDARY);
+        context.drawTextWithShadow(textRenderer, "Min: " + z.min.x + " " + z.min.y + " " + z.min.z, startX + 12, 84, ScreenTheme.TEXT_MUTED);
+        context.drawTextWithShadow(textRenderer, "Max: " + z.max.x + " " + z.max.y + " " + z.max.z, startX + panelWidth / 2, 84, ScreenTheme.TEXT_MUTED);
 
-        context.drawTextWithShadow(textRenderer, "Mob Rules", startX + 12, 112, 0xA5FFB5);
+        context.drawTextWithShadow(textRenderer, "Mob Rules", startX + 12, 112, ScreenTheme.ACCENT_PRIMARY);
         int resourceCount = z.resources == null ? 0 : z.resources.size();
-        context.drawTextWithShadow(textRenderer, "Resources: " + resourceCount, startX + panelWidth / 2, 112, 0xA5FFB5);
+        context.drawTextWithShadow(textRenderer, "Resources: " + resourceCount, startX + panelWidth / 2, 112, ScreenTheme.ACCENT_PRIMARY);
 
         int listY = 148;
         int rowH = 52;
@@ -143,12 +143,12 @@ public class ZoneDetailsScreen extends Screen implements GerbariumRefreshableScr
             int rowY = listY + i * rowH;
             context.fill(startX + 4, rowY, startX + panelWidth - 4, rowY + rowH - 4, 0x33000000);
             String titleText = ScreenLayout.trim(textRenderer, (r.name == null || r.name.isBlank() ? r.id : r.name) + " -> " + r.entity, panelWidth - 124);
-            context.drawTextWithShadow(textRenderer, titleText, startX + 12, rowY + 8, 0xFFFFFF);
-            context.drawTextWithShadow(textRenderer, summary(r), startX + 12, rowY + 24, 0xAAAAAA);
+            context.drawTextWithShadow(textRenderer, titleText, startX + 12, rowY + 8, ScreenTheme.TEXT_PRIMARY);
+            context.drawTextWithShadow(textRenderer, summary(r), startX + 12, rowY + 24, ScreenTheme.TEXT_MUTED);
         }
 
         if (totalRules == 0) {
-            context.drawCenteredTextWithShadow(textRenderer, "No rules added. Click 'Add Rule' to begin.", width / 2, listY + 20, 0xAAAAAA);
+            context.drawCenteredTextWithShadow(textRenderer, "No rules added. Click 'Add Rule' to begin.", width / 2, listY + 20, ScreenTheme.TEXT_MUTED);
         }
 
         super.render(context, mouseX, mouseY, delta);

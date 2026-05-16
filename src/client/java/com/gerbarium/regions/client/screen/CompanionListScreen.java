@@ -108,10 +108,10 @@ public class CompanionListScreen extends Screen {
 
         int panelWidth = ScreenLayout.panelWidth(width, 560);
         int startX = ScreenLayout.panelLeft(width, panelWidth);
-        ScreenLayout.drawPanel(context, startX, 15, panelWidth, height - 15);
+        ScreenTheme.drawPanel(context, startX, 15, panelWidth, height - 15);
         String titleLabel = ruleId == null || ruleId.isBlank() ? "(rule)" : ruleId;
-        context.drawCenteredTextWithShadow(textRenderer, "Companions for: " + titleLabel, width / 2, 19, 0xFFFFFF);
-        context.drawTextWithShadow(textRenderer, "List / edit / validate companions", startX, 31, 0xA5FFB5);
+        context.drawCenteredTextWithShadow(textRenderer, "Companions for: " + titleLabel, width / 2, 19, ScreenTheme.ACCENT_PRIMARY);
+        context.drawTextWithShadow(textRenderer, "List / edit / validate companions", startX, 31, ScreenTheme.ACCENT_PRIMARY);
 
         int rowH = 28;
         int listStartY = 84;
@@ -128,15 +128,15 @@ public class CompanionListScreen extends Screen {
             String text = title + " -> " + c.entity + " | count " + c.count + " | radius " + c.radius + " | chance " + chance;
             text = ScreenLayout.trim(textRenderer, text, panelWidth - 125);
             int rowY = listStartY + i * rowH;
-            context.drawTextWithShadow(textRenderer, text, startX, rowY + 6, dup ? 0xFF7777 : 0xDDDDDD);
+            context.drawTextWithShadow(textRenderer, text, startX, rowY + 6, dup ? ScreenTheme.ERROR : ScreenTheme.TEXT_SECONDARY);
         }
 
         if (draft.isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, "No companions added", width / 2, listStartY + 20, 0xAAAAAA);
+            context.drawCenteredTextWithShadow(textRenderer, "No companions added", width / 2, listStartY + 20, ScreenTheme.TEXT_MUTED);
         }
 
         if (!error.isBlank()) {
-            context.drawCenteredTextWithShadow(textRenderer, error, width / 2, height - 55, 0xFF5555);
+            context.drawCenteredTextWithShadow(textRenderer, error, width / 2, height - 55, ScreenTheme.ERROR);
         }
 
         super.render(context, mouseX, mouseY, delta);

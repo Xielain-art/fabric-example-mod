@@ -134,12 +134,12 @@ public class ZoneResourcesScreen extends Screen implements GerbariumRefreshableS
 
         int panelWidth = ScreenLayout.panelWidth(width, 680);
         int startX = ScreenLayout.panelLeft(width, panelWidth);
-        ScreenLayout.drawPanel(context, startX, 15, panelWidth, height - 15);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 23, 0xFFFFFF);
+        ScreenTheme.drawPanel(context, startX, 15, panelWidth, height - 15);
+        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 23, ScreenTheme.ACCENT_PRIMARY);
 
         Optional<Zone> oz = ClientGerbariumData.findZone(zoneId);
         if (oz.isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, "Zone not found", width / 2, height / 2 - 10, 0xFF5555);
+            context.drawCenteredTextWithShadow(textRenderer, "Zone not found", width / 2, height / 2 - 10, ScreenTheme.ERROR);
             super.render(context, mouseX, mouseY, delta);
             return;
         }
@@ -159,7 +159,7 @@ public class ZoneResourcesScreen extends Screen implements GerbariumRefreshableS
         }).toList();
 
         int actionY = 40 + 24;
-        context.drawTextWithShadow(textRenderer, "Zone: " + z.id + " | Resource Rules (" + filtered.size() + ")", startX + 12, actionY + 4, 0xA5FFB5);
+        context.drawTextWithShadow(textRenderer, "Zone: " + z.id + " | Resource Rules (" + filtered.size() + ")", startX + 12, actionY + 4, ScreenTheme.ACCENT_PRIMARY);
 
         int listY = actionY + 28;
         int rowH = 52;
@@ -173,13 +173,13 @@ public class ZoneResourcesScreen extends Screen implements GerbariumRefreshableS
             int rowY = listY + i * rowH;
             context.fill(startX + 4, rowY, startX + panelWidth - 4, rowY + rowH - 4, 0x33000000);
             String titleText = ScreenLayout.trim(textRenderer, (r.name == null || r.name.isBlank() ? r.id : r.name) + " [" + (r.enabled ? "ON" : "OFF") + "]", panelWidth - 124);
-            context.drawTextWithShadow(textRenderer, titleText, startX + 12, rowY + 8, 0xFFFFFF);
-            context.drawTextWithShadow(textRenderer, resourceSummary(r), startX + 12, rowY + 24, 0xAAAAAA);
+            context.drawTextWithShadow(textRenderer, titleText, startX + 12, rowY + 8, ScreenTheme.TEXT_PRIMARY);
+            context.drawTextWithShadow(textRenderer, resourceSummary(r), startX + 12, rowY + 24, ScreenTheme.TEXT_MUTED);
         }
 
         if (totalRules == 0) {
             String msg = query.isBlank() ? "No resource rules. Click 'Add Resource' to begin." : "No results for '" + query + "'.";
-            context.drawCenteredTextWithShadow(textRenderer, msg, width / 2, listY + 20, 0xAAAAAA);
+            context.drawCenteredTextWithShadow(textRenderer, msg, width / 2, listY + 20, ScreenTheme.TEXT_MUTED);
         }
 
         super.render(context, mouseX, mouseY, delta);

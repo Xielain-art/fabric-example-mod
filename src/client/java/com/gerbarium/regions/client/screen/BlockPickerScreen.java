@@ -108,12 +108,12 @@ public class BlockPickerScreen extends Screen {
 
         int panelWidth = ScreenLayout.panelWidth(width, 560);
         int startX = ScreenLayout.panelLeft(width, panelWidth);
-        ScreenLayout.drawPanel(context, startX, 15, panelWidth, height - 15);
-        context.drawCenteredTextWithShadow(textRenderer, title.getString(), width / 2, 23, 0xFFFFFF);
-        context.drawTextWithShadow(textRenderer, "Search block ids", startX, 28, 0xA5FFB5);
+        ScreenTheme.drawPanel(context, startX, 15, panelWidth, height - 15);
+        context.drawCenteredTextWithShadow(textRenderer, title.getString(), width / 2, 23, ScreenTheme.ACCENT_PRIMARY);
+        context.drawTextWithShadow(textRenderer, "Search block ids", startX, 28, ScreenTheme.ACCENT_PRIMARY);
 
         if (ClientGerbariumData.blockIds().isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, "No block IDs synced yet. Click Refresh.", width / 2, height / 2 - 10, 0xFFAAAAAA);
+            context.drawCenteredTextWithShadow(textRenderer, "No block IDs synced yet. Click Refresh.", width / 2, height / 2 - 10, ScreenTheme.TEXT_MUTED);
         }
 
         super.render(context, mouseX, mouseY, delta);

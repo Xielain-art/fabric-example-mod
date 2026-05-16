@@ -98,8 +98,8 @@ public class RegionsScreen extends Screen implements GerbariumRefreshableScreen 
 
         int panelWidth = ScreenLayout.panelWidth(width, 480);
         int startX = ScreenLayout.panelLeft(width, panelWidth);
-        ScreenLayout.drawPanel(context, startX, 15, panelWidth, height - 15);
-        context.drawTextWithShadow(textRenderer, title.getString(), startX, 30, 0xFFFFFF);
+        ScreenTheme.drawPanel(context, startX, 15, panelWidth, height - 15);
+        context.drawTextWithShadow(textRenderer, title.getString(), startX, 30, ScreenTheme.ACCENT_PRIMARY);
 
         if (ClientGerbariumData.zonesFile().zones.isEmpty()) {
             context.drawCenteredTextWithShadow(textRenderer, "No zones found. Use /gerb zone create <id>", width / 2, height / 2 - 10, 0xFFAAAAAA);

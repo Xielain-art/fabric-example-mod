@@ -111,12 +111,12 @@ public class EntityPickerScreen extends Screen {
 
         int panelWidth = ScreenLayout.panelWidth(width, 560);
         int startX = ScreenLayout.panelLeft(width, panelWidth);
-        ScreenLayout.drawPanel(context, startX, 15, panelWidth, height - 15);
-        context.drawCenteredTextWithShadow(textRenderer, title.getString(), width / 2, 23, 0xFFFFFF);
-        context.drawTextWithShadow(textRenderer, "Search entity ids", startX, 28, 0xA5FFB5);
+        ScreenTheme.drawPanel(context, startX, 15, panelWidth, height - 15);
+        context.drawCenteredTextWithShadow(textRenderer, title.getString(), width / 2, 23, ScreenTheme.ACCENT_PRIMARY);
+        context.drawTextWithShadow(textRenderer, "Search entity ids", startX, 28, ScreenTheme.ACCENT_PRIMARY);
 
         if (ClientGerbariumData.entityIds().isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, "No entity IDs synced yet. Click Refresh.", width / 2, height / 2 - 10, 0xFFAAAAAA);
+            context.drawCenteredTextWithShadow(textRenderer, "No entity IDs synced yet. Click Refresh.", width / 2, height / 2 - 10, ScreenTheme.TEXT_MUTED);
         }
 
         super.render(context, mouseX, mouseY, delta);
