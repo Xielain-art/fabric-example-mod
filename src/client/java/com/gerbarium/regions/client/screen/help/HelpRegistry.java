@@ -17,204 +17,206 @@ public class HelpRegistry {
 
     public static void init() {
         register(HelpTopic.ZONE_RUNTIME_SETTINGS,
-            section("Activation Range",
-                "Radius in blocks within which a player must be for the zone to activate. " +
-                "When a player enters this range, the zone becomes active and mob spawning begins. " +
-                "Default: 96 blocks."),
-            section("Deactivate After Seconds",
-                "How many seconds the zone stays active after the last player leaves the activation range. " +
-                "Set to 0 to deactivate immediately. Default: 45 seconds."),
-            section("First Spawn Delay",
-                "Delay in seconds before the first mob spawn occurs after zone activation. " +
-                "Useful to prevent instant spawns when a player barely enters range. Default: 2 seconds."),
-            section("Reactivation Cooldown",
-                "Minimum seconds between zone activations. Prevents rapid on/off toggling. Default: 300 seconds."),
-            section("Min Distance From Player",
-                "Minimum distance in blocks that mobs can spawn from the nearest player. " +
-                "Prevents spawning directly on top of players. Default: 24 blocks."),
-            section("Max Distance From Player",
-                "Maximum distance in blocks that mobs can spawn from the nearest player. " +
-                "Must be greater than min distance. Default: 64 blocks."),
-            section("Max Position Attempts",
-                "How many times the system tries to find a valid spawn position before giving up. " +
-                "Higher values may cause lag. Default: 64 attempts."),
-            section("Require Loaded Chunk",
-                "If ON, mobs will only spawn in chunks that are loaded. " +
-                "If OFF, spawning may occur in unloaded chunks (not recommended)."),
-            section("Respect Vanilla Spawn Rules",
-                "If ON, mob spawning follows Minecraft vanilla rules (light level, biome, etc.). " +
-                "If OFF, mobs can spawn anywhere within the zone regardless of vanilla conditions.")
+            section("Радиус активации (Activation Range)",
+                "Радиус в блоках, в пределах которого игрок должен находиться для активации зоны. " +
+                "Когда игрок входит в этот радиус, зона становится активной и начинается спавн мобов. " +
+                "По умолчанию: 96 блоков."),
+            section("Деактивация через секунды (Deactivate After Seconds)",
+                "Сколько секунд зона остаётся активной после того, как последний игрок покинул радиус активации. " +
+                "Установите 0 для мгновенной деактивации. По умолчанию: 45 секунд."),
+            section("Задержка первого спавна (First Spawn Delay)",
+                "Задержка в секундах перед первым спавном мобов после активации зоны. " +
+                "Полезно, чтобы предотвратить мгновенный спавн, когда игрок едва зашёл в радиус. По умолчанию: 2 секунды."),
+            section("Кулдаун реактивации (Reactivation Cooldown)",
+                "Минимальное количество секунд между активациями зоны. Предотвращает частое включение/выключение. " +
+                "По умолчанию: 300 секунд (5 минут)."),
+            section("Мин. расстояние от игрока (Min Distance From Player)",
+                "Минимальное расстояние в блоках, на котором мобы могут спавниться от ближайшего игрока. " +
+                "Предотвращает спавн прямо на игроке. По умолчанию: 24 блока."),
+            section("Макс. расстояние от игрока (Max Distance From Player)",
+                "Максимальное расстояние в блоках, на котором мобы могут спавниться от ближайшего игрока. " +
+                "Должно быть больше минимального расстояния. По умолчанию: 64 блока."),
+            section("Макс. попыток позиции (Max Position Attempts)",
+                "Сколько раз система пытается найти валидную позицию для спавна перед сдачей. " +
+                "Большие значения могут вызывать лаги. По умолчанию: 64 попытки."),
+            section("Требовать загруженный чанк (Require Loaded Chunk)",
+                "Если ВКЛ, мобы будут спавниться только в загруженных чанках. " +
+                "Если ВЫКЛ, спавн может происходить в незагруженных чанках (не рекомендуется)."),
+            section("Учитывать ванильные правила (Respect Vanilla Spawn Rules)",
+                "Если ВКЛ, спавн мобов следует правилам Minecraft (уровень света, биом и т.д.). " +
+                "Если ВЫКЛ, мобы могут спавниться в любой точке зоны вне зависимости от ванильных условий.")
         );
 
         register(HelpTopic.MOB_RULE_BASICS,
-            section("Rule Name",
-                "Display name for this mob rule. Used for identification in the zone details screen."),
-            section("Entity",
-                "Minecraft entity ID in format 'namespace:path'. Examples: 'minecraft:zombie', 'minecraft:skeleton'. " +
-                "Use the 'Pick Entity' button to browse available entities."),
-            section("Enabled",
-                "If OFF, this rule is completely ignored and no mobs will spawn from it."),
-            section("Spawn Type",
-                "PACK: Spawns multiple mobs as a group. Suitable for normal enemies.\n" +
-                "UNIQUE: Spawns a single special mob (boss). Tuned for rare, powerful enemies."),
-            section("Boundary Mode",
-                "Controls what happens when a mob leaves the zone boundary:\n" +
-                "NONE - Mob can leave freely.\n" +
-                "LEASH - Mob is returned if outside too long.\n" +
-                "TELEPORT_BACK - Mob is instantly teleported back.\n" +
-                "REMOVE_OUTSIDE - Mob is removed (use with caution).")
+            section("Название правила (Rule Name)",
+                "Отображаемое название этого правила мобов. Используется для идентификации в экране деталей зоны."),
+            section("Сущность (Entity)",
+                "ID сущности Minecraft в формате 'namespace:path'. Примеры: 'minecraft:zombie', 'minecraft:skeleton'. " +
+                "Используйте кнопку 'Выбрать сущность' для просмотра доступных сущностей."),
+            section("Включено (Enabled)",
+                "Если ВЫКЛ, это правило полностью игнорируется и мобы из него не спавнятся."),
+            section("Тип спавна (Spawn Type)",
+                "PACK — Спавнит несколько мобов группой. Подходит для обычных врагов.\n" +
+                "UNIQUE — Спавнит одного особого моба (босса). Настроено для редких, мощных врагов."),
+            section("Режим границы (Boundary Mode)",
+                "Контролирует, что происходит, когда моб покидает границу зоны:\n" +
+                "NONE — Моб может свободно уходить.\n" +
+                "LEASH — Моб возвращается, если слишком долго находится за пределами.\n" +
+                "TELEPORT_BACK — Моб мгновенно телепортируется обратно.\n" +
+                "REMOVE_OUTSIDE — Моб удаляется (осторожно!).")
         );
 
         register(HelpTopic.MOB_RULE_SPAWN,
-            section("Refill Mode",
-                "ON_ACTIVATION - Spawns mobs when zone activates, up to max alive.\n" +
-                "TIMED - Periodically spawns mobs on a timer. May be farmable!\n" +
-                "AFTER_DEATH - Only respawns after all mobs from this rule die."),
-            section("Max Alive",
-                "Maximum number of mobs from this rule that can exist simultaneously. " +
-                "For UNIQUE type, this is always 1."),
-            section("Spawn Count",
-                "How many mobs to spawn at once. For PACK type, this is the group size."),
-            section("Respawn Seconds",
-                "Cooldown in seconds between spawn attempts. Longer values reduce farmability."),
-            section("Chance",
-                "Probability (0.0 to 1.0) that a spawn attempt succeeds. 1.0 = always, 0.5 = 50%."),
-            section("Spawn Trigger",
-                "TIMER - Spawn on a regular interval.\n" +
-                "AFTER_DEATH - Spawn only after previous mobs die.\n" +
-                "ON_ACTIVATION - Spawn once when zone activates.\n" +
-                "MANUAL - Only spawn via command."),
-            section("Respawn After Death / Despawn",
-                "Whether to trigger respawn when mobs die or despawn. Usually both are ON for continuous spawning.")
+            section("Режим пополнения (Refill Mode)",
+                "ON_ACTIVATION — Спавнит мобов при активации зоны, до максимума живых.\n" +
+                "TIMED — Периодически спавнит мобов по таймеру. Может быть фармопригодным!\n" +
+                "AFTER_DEATH — Переспавн только после смерти всех мобов этого правила."),
+            section("Макс. живых (Max Alive)",
+                "Максимальное количество мобов от этого правила, которые могут существовать одновременно. " +
+                "Для типа UNIQUE это всегда 1."),
+            section("Количество спавна (Spawn Count)",
+                "Сколько мобов спавнится за раз. Для PACK — это размер группы."),
+            section("Время респавна в секундах (Respawn Seconds)",
+                "Кулдаун в секундах между попытками спавна. Большие значения снижают фармопригодность."),
+            section("Шанс (Chance)",
+                "Вероятность (0.0 до 1.0), что попытка спавна успешна. 1.0 = всегда, 0.5 = 50%."),
+            section("Триггер спавна (Spawn Trigger)",
+                "TIMER — Спавн через регулярные интервалы.\n" +
+                "AFTER_DEATH — Спавн только после смерти предыдущих мобов.\n" +
+                "ON_ACTIVATION — Спавн один раз при активации зоны.\n" +
+                "MANUAL — Только через команду."),
+            section("Респавн после смерти/деспавна",
+                "Включить респавн, когда мобы умирают или деспавнятся. Обычно оба ВКЛ для непрерывного спавна.")
         );
 
         register(HelpTopic.MOB_RULE_PLACEMENT,
-            section("Spawn Mode",
-                "RANDOM_VALID_POSITION - Random valid location in zone.\n" +
-                "CENTER - Spawn at exact zone center.\n" +
-                "BOSS_ROOM - Spawn in largest open room (for bosses).\n" +
-                "FIXED_POINT - Spawn at specific coordinates."),
-            section("Fixed X/Y/Z",
-                "Exact spawn coordinates. Only used when Spawn Mode is FIXED_POINT."),
-            section("Position Attempts",
-                "How many times to try finding a valid spawn position. Higher = more lag but better success rate."),
-            section("Min Distance Between Spawns",
-                "Minimum blocks between spawned mobs. Prevents clustering."),
-            section("Allow Small Room",
-                "If ON, mobs can spawn in small rooms. If OFF, requires larger open space."),
-            section("Spread Spawns",
-                "If ON, tries to spread mobs evenly across the zone. If OFF, may cluster."),
-            section("Require Player Nearby",
-                "If ON, only spawns when a player is within Player Activation Range."),
-            section("Require Chunk Loaded",
-                "If ON, only spawns in loaded chunks. Recommended for performance."),
-            section("Allow Force Load",
-                "If ON, can force-load chunks to spawn mobs. Use with caution on servers.")
+            section("Режим размещения (Spawn Mode)",
+                "RANDOM_VALID_POSITION — Случайная валидная позиция в зоне.\n" +
+                "CENTER — Спавн в центре зоны.\n" +
+                "BOSS_ROOM — Спавн в самой большой открытой комнате (для боссов).\n" +
+                "FIXED_POINT — Спавн в точных координатах."),
+            section("Фикс. X/Y/Z",
+                "Точные координаты спавна. Используются только при режиме FIXED_POINT."),
+            section("Попыток позиции",
+                "Сколько раз пытаться найти валидную позицию для спавна. Больше = больше лагов, но выше шанс успеха."),
+            section("Мин. расстояние между спавнами",
+                "Минимальное расстояние в блоках между спавненными мобами. Предотвращает скопление."),
+            section("Разрешить маленькую комнату",
+                "Если ВКЛ, мобы могут спавниться в маленьких комнатах. Если ВЫКЛ, требуется большое открытое пространство."),
+            section("Распределять спавны",
+                "Если ВКЛ, пытается равномерно распределить мобов по зоне. Если ВЫКЛ, возможно скопление."),
+            section("Требовать игрока рядом",
+                "Если ВКЛ, спавн только когда игрок находится в радиусе активации игрока."),
+            section("Требовать загруженный чанк",
+                "Если ВКЛ, спавн только в загруженных чанках. Рекомендуется для производительности."),
+            section("Разрешить принудительную загрузку",
+                "Если ВКЛ, может принудительно загружать чанки для спавна мобов. Осторожно на серверах!")
         );
 
         register(HelpTopic.MOB_RULE_ADVANCED,
-            section("Companions",
-                "Additional mobs that spawn alongside the main entity. " +
-                "Each companion has its own entity type, count, radius, and spawn chance."),
-            section("Despawn When Zone Inactive",
-                "If ON, removes all mobs from this rule when the zone deactivates."),
-            section("Announce On Spawn",
-                "If ON, broadcasts a server message when mobs spawn. Useful for boss events."),
-            section("Boss Preset",
-                "One-click preset for boss configuration: UNIQUE type, AFTER_DEATH refill, BOSS_ROOM spawn, " +
-                "max alive = 1, teleport back boundary.")
+            section("Спутники (Companions)",
+                "Дополнительные мобы, которые спавнятся вместе с основной сущностью. " +
+                "Каждый спутник имеет свой тип сущности, количество, радиус и шанс спавна."),
+            section("Деспавн при деактивации зоны",
+                "Если ВКЛ, удаляет всех мобов этого правила при деактивации зоны."),
+            section("Объявлять при спавне",
+                "Если ВКЛ, транслирует сообщение сервера при спавне мобов. Полезно для босс-ивентов."),
+            section("Пресет босса (Boss Preset)",
+                "Одно нажатие для конфигурации босса: тип UNIQUE, пополнение AFTER_DEATH, режим BOSS_ROOM, " +
+                "макс. живых = 1, граница TELEPORT_BACK.")
         );
 
         register(HelpTopic.MOB_RULE_BOUNDARY,
-            section("Boundary Mode",
-                "Controls mob behavior when leaving zone bounds:\n" +
-                "NONE - No restriction.\n" +
-                "LEASH - Returns mob after Max Outside Seconds.\n" +
-                "TELEPORT_BACK - Instantly teleports mob back inside.\n" +
-                "REMOVE_OUTSIDE - Removes mob (does NOT count as death for respawn)."),
-            section("Max Outside Seconds",
-                "How long a mob can stay outside the zone before boundary action triggers. " +
-                "Only used for LEASH mode. Default: 10 seconds."),
-            section("Check Interval Ticks",
-                "How often (in game ticks, 20 ticks = 1 second) to check mob position. " +
-                "Lower = more responsive but more CPU usage. Minimum: 20 ticks."),
-            section("Teleport Back",
-                "If ON and mode is LEASH, teleports mob back instead of walking. Faster but may look jarring.")
+            section("Режим границы (Boundary Mode)",
+                "Контролирует поведение моба при выходе за границы зоны:\n" +
+                "NONE — Без ограничений.\n" +
+                "LEASH — Возвращает моба после превышения времени за пределами.\n" +
+                "TELEPORT_BACK — Мгновенно телепортирует моба обратно внутрь.\n" +
+                "REMOVE_OUTSIDE — Удаляет моба (НЕ считается как смерть для респавна!)."),
+            section("Макс. секунд за пределами",
+                "Сколько моб может находиться за пределами зоны до срабатывания действия границы. " +
+                "Используется только для режима LEASH. По умолчанию: 10 секунд."),
+            section("Интервал проверки в тиках",
+                "Как часто (в игровых тиках, 20 тиков = 1 секунда) проверять позицию моба. " +
+                "Меньше = отзывчивее, но больше нагрузка на процессор. Минимум: 20 тиков."),
+            section("Телепорт обратно",
+                "Если ВКЛ и режим LEASH, телепортирует моба обратно вместо ходьбы. Быстрее, но может выглядеть резко.")
         );
 
         register(HelpTopic.RESOURCE_RULE_BASICS,
-            section("Rule ID",
-                "Unique identifier for this resource rule. Auto-generated, read-only."),
-            section("Name",
-                "Display name for this rule. Used in lists and messages."),
-            section("Enabled",
-                "If OFF, this rule does not place any blocks."),
-            section("Activation Mode",
-                "REAL_TIME - Blocks are placed/updated continuously in real time.\n" +
-                "WHILE_ZONE_ACTIVE - Only places blocks while the parent zone is active.")
+            section("ID правила (Rule ID)",
+                "Уникальный идентификатор этого правила ресурсов. Автогенерация, только для чтения."),
+            section("Название (Name)",
+                "Отображаемое название этого правила. Используется в списках и сообщениях."),
+            section("Включено (Enabled)",
+                "Если ВЫКЛ, это правило не размещает блоки."),
+            section("Режим активации (Activation Mode)",
+                "REAL_TIME — Блоки размещаются/обновляются непрерывно в реальном времени.\n" +
+                "WHILE_ZONE_ACTIVE — Размещает блоки только пока родительская зона активна.")
         );
 
         register(HelpTopic.RESOURCE_RULE_BLOCKS,
-            section("Target Blocks",
-                "Block IDs that this rule can replace. Format: 'minecraft:stone'. " +
-                "If Replace Mode is ONLY_TARGET_BLOCKS, these are the only blocks that will be replaced."),
-            section("Resource Blocks",
-                "Block IDs that this rule places. Each has a weight determining selection probability. " +
-                "Higher weight = more likely to be chosen."),
-            section("Replace Mode",
-                "ONLY_TARGET_BLOCKS - Only replaces blocks in the Target Blocks list.\n" +
-                "AIR_OR_REPLACEABLE - Can replace air and replaceable blocks (grass, etc.).\n" +
-                "TARGET_BLOCKS_OR_AIR - Replaces target blocks or air.")
+            section("Целевые блоки (Target Blocks)",
+                "ID блоков, которые это правило может заменить. Формат: 'minecraft:stone'. " +
+                "Если режим замены ONLY_TARGET_BLOCKS, эти блоки будут единственными заменяемыми."),
+            section("Ресурсные блоки (Resource Blocks)",
+                "ID блоков, которые размещает это правило. Каждый имеет вес, определяющий вероятность выбора. " +
+                "Больший вес = выше шанс быть выбранным."),
+            section("Режим замены (Replace Mode)",
+                "ONLY_TARGET_BLOCKS — Заменяет только блоки из списка целевых.\n" +
+                "AIR_OR_REPLACEABLE — Может заменять воздух и заменяемые блоки (трава и т.д.).\n" +
+                "TARGET_BLOCKS_OR_AIR — Заменяет целевые блоки или воздух.")
         );
 
         register(HelpTopic.RESOURCE_RULE_LIMITS,
-            section("Max Active Blocks",
-                "Maximum number of resource blocks that can exist at once. When reached, no more are placed until some are removed/mined."),
-            section("Spawn Count",
-                "How many blocks to place per spawn attempt."),
-            section("Respawn Seconds",
-                "Cooldown between block placement attempts."),
-            section("Chance",
-                "Probability (0.0-1.0) that a placement attempt succeeds."),
-            section("Min Y / Max Y",
-                "Vertical limits for block placement. Leave blank to use zone bounds."),
-            section("Min Distance Between Resources",
-                "Minimum blocks between placed resources. Prevents clustering."),
-            section("Placement Mode",
-                "RANDOM_SCATTER - Randomly scattered throughout the zone. (Currently the only option)")
+            section("Макс. активных блоков",
+                "Максимальное количество блоков ресурсов, которые могут существовать одновременно. " +
+                "При достижении лимита новые блоки не размещаются, пока некоторые не будут удалены/добыты."),
+            section("Количество спавна",
+                "Сколько блоков размещать за одну попытку спавна."),
+            section("Время респавна в секундах",
+                "Кулдаун между попытками размещения блоков."),
+            section("Шанс",
+                "Вероятность (0.0-1.0), что попытка размещения успешна."),
+            section("Мин. Y / Макс. Y",
+                "Вертикальные границы для размещения блоков. Оставьте пустым для использования границ зоны."),
+            section("Мин. расстояние между ресурсами",
+                "Минимальное расстояние в блоках между размещёнными ресурсами. Предотвращает скопление."),
+            section("Режим размещения",
+                "RANDOM_SCATTER — Случайно разбросаны по всей зоне. (Пока единственный вариант)")
         );
 
         register(HelpTopic.RESOURCE_RULE_SAFETY,
-            section("Restore Delay Seconds",
-                "How long after a block is mined before it can be restored. " +
-                "Prevents instant reappearing which looks like a bug."),
-            section("Max Position Attempts",
-                "How many times to try finding a valid placement position."),
-            section("Require Loaded Chunk",
-                "Only place blocks in loaded chunks. Recommended for performance."),
-            section("Respect Protected Blocks",
-                "Do not replace blocks that are considered protected (bedrock, command blocks, etc.)."),
-            section("Drop Original On Replace",
-                "If ON, the replaced block drops its item. If OFF, it's silently removed."),
-            section("Restore If Not Mined",
-                "If ON, restores the original block if the resource block is removed by non-player means."),
-            section("Prevent Player Placed Blocks",
-                "Do not replace blocks that were placed by players. Preserves player builds."),
-            section("Allow Block Entities",
-                "If ON, can replace blocks with tile entities (chests, furnaces). Use with caution.")
+            section("Задержка восстановления в секундах",
+                "Сколько времени после добычи блока должно пройти перед его восстановлением. " +
+                "Предотвращает мгновенное появление, которое выглядит как баг."),
+            section("Макс. попыток позиции",
+                "Сколько раз пытаться найти валидную позицию для размещения."),
+            section("Требовать загруженный чанк",
+                "Размещать блоки только в загруженных чанках. Рекомендуется для производительности."),
+            section("Уважать защищённые блоки",
+                "Не заменять блоки, считающиеся защищёнными (бедрок, командные блоки и т.д.)."),
+            section("Выбрасывать оригинал при замене",
+                "Если ВКЛ, заменённый блок дропает свой предмет. Если ВЫКЛ, удаляется бесшумно."),
+            section("Восстанавливать если не добыто",
+                "Если ВКЛ, восстанавливает оригинальный блок, если блок ресурса был удалён не игроком."),
+            section("Предотвращать игроко-размещённые блоки",
+                "Не заменять блоки, размещённые игроками. Сохраняет постройки игроков."),
+            section("Разрешить блок-сущности",
+                "Если ВКЛ, может заменять блоки с тайл-энтити (сундуки, печи). Осторожно!")
         );
 
         register(HelpTopic.COMPANION_EDIT,
-            section("Companion Name",
-                "Display name for this companion. Used in lists and messages."),
-            section("Entity",
-                "Minecraft entity ID for the companion. Example: 'minecraft:zombie'."),
-            section("Count",
-                "How many of this companion spawn."),
-            section("Radius",
-                "Maximum distance in blocks from the main mob that companions can spawn."),
-            section("Chance",
-                "Probability (0.0-1.0) that companions spawn at all. 1.0 = always.")
+            section("Имя спутника",
+                "Отображаемое имя этого спутника. Используется в списках и сообщениях."),
+            section("Сущность",
+                "ID сущности Minecraft для спутника. Пример: 'minecraft:zombie'."),
+            section("Количество",
+                "Сколько таких спутников спавнится."),
+            section("Радиус",
+                "Максимальное расстояние в блоках от основного моба, на котором могут спавниться спутники."),
+            section("Шанс",
+                "Вероятность (0.0-1.0), что спутники вообще заспавнятся. 1.0 = всегда.")
         );
     }
 

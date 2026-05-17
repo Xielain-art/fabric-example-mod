@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSelectionConsumer {
-    private static final int PAGE_COUNT = 5;
+    private static final int PAGE_COUNT = 6;
 
     private final String zoneId;
     private final ResourceRule draft;
@@ -50,16 +50,17 @@ public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSele
     private TextFieldWidget minYField;
     private TextFieldWidget maxYField;
     private TextFieldWidget minDistanceField;
-    private CyclingButtonWidget<ReplaceMode> replaceModeButton;
-    private CyclingButtonWidget<RestoreMode> restoreModeButton;
     private CyclingButtonWidget<PlacementMode> placementModeButton;
 
     private TextFieldWidget restoreDelayField;
     private TextFieldWidget maxAttemptsField;
-    private CyclingButtonWidget<Boolean> requireLoadedButton;
-    private CyclingButtonWidget<Boolean> respectProtectedButton;
+    private CyclingButtonWidget<ReplaceMode> replaceModeButton;
+    private CyclingButtonWidget<RestoreMode> restoreModeButton;
     private CyclingButtonWidget<Boolean> dropOriginalButton;
     private CyclingButtonWidget<Boolean> restoreIfNotMinedButton;
+
+    private CyclingButtonWidget<Boolean> requireLoadedButton;
+    private CyclingButtonWidget<Boolean> respectProtectedButton;
     private CyclingButtonWidget<Boolean> preventPlayerPlacedButton;
     private CyclingButtonWidget<Boolean> allowBlockEntitiesButton;
     private BlockPickTarget blockPickTarget = BlockPickTarget.RESOURCE;
@@ -87,8 +88,10 @@ public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSele
     private void updateHelpTopic() {
         HelpTopic topic = switch (page) {
             case 0 -> HelpTopic.RESOURCE_RULE_BASICS;
-            case 1, 2 -> HelpTopic.RESOURCE_RULE_BLOCKS;
+            case 1 -> HelpTopic.RESOURCE_RULE_BLOCKS;
+            case 2 -> HelpTopic.RESOURCE_RULE_BLOCKS;
             case 3 -> HelpTopic.RESOURCE_RULE_LIMITS;
+            case 4 -> HelpTopic.RESOURCE_RULE_SAFETY;
             default -> HelpTopic.RESOURCE_RULE_SAFETY;
         };
         setHelpTopic(topic);
@@ -125,12 +128,15 @@ public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSele
         } else if (page == 3) {
             addLimitsPage(contentX, topY);
         } else if (page == 4) {
+            addModesPage(contentX, topY);
+        } else if (page == 5) {
             addSafetyPage(contentX, topY);
         }
     }
 
+    // Page 0: Basics — 4 rows
     private void addBasicsPage(int startX, int topY) {
-        int rowH = 40;
+        int rowH = layoutRows(4);
 
         idField = field(startX, topY, contentW, draft.id == null ? "" : draft.id);
         idField.setEditable(false);
@@ -140,17 +146,18 @@ public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSele
         addDrawableChild(nameField);
 
         enabledButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.enabled)
-                .build(startX, topY + rowH * 2, 140, 20, Text.literal("Enabled"), (b, v) -> {}));
+                .build(startX, topY + rowH * 2, Math.max(140, contentW / 2 - 4), 20, Text.literal("Enabled"), (b, v) -> {}));
 
         activationModeButton = addDrawableChild(CyclingButtonWidget.<ResourceActivationMode>builder(v -> Text.literal(v.name()))
                 .values(List.of(ResourceActivationMode.REAL_TIME, ResourceActivationMode.WHILE_ZONE_ACTIVE))
                 .initially(draft.activationMode)
-                .build(startX, topY + rowH * 3, 240, 20, Text.literal("Activation Mode"), (b, v) -> {}));
+                .build(startX + Math.max(144, contentW / 2), topY + rowH * 2, Math.max(140, contentW / 2 - 4), 20, Text.literal("Activation Mode"), (b, v) -> {}));
     }
 
+    // Page 1: Target Blocks — 3 rows
     private void addTargetBlocksPage(int startX, int topY) {
+        int rowH = layoutRows(3);
         int fieldW = Math.max(160, contentW - 172);
-        int rowH = 28;
 
         addTargetField = field(startX, topY, fieldW, targetInput);
         addDrawableChild(addTargetField);
@@ -178,9 +185,10 @@ public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSele
         }).dimensions(startX, topY + rowH, contentW, 20).build());
     }
 
+    // Page 2: Resource Blocks — 3 rows
     private void addResourceBlocksPage(int startX, int topY) {
+        int rowH = layoutRows(3);
         int blockFieldW = Math.max(160, contentW - 224);
-        int rowH = 28;
 
         addResourceBlockField = field(startX, topY, blockFieldW, resourceInput);
         addDrawableChild(addResourceBlockField);
@@ -216,9 +224,10 @@ public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSele
         }).dimensions(startX, topY + rowH, contentW, 20).build());
     }
 
+    // Page 3: Limits — 5 rows
     private void addLimitsPage(int startX, int topY) {
-        int half = (contentW - 10) / 2;
-        int rowH = layoutRows(6);
+        int rowH = layoutRows(5);
+        int half = Math.max(110, (contentW - 10) / 2);
 
         maxActiveField = field(startX, topY, half, String.valueOf(draft.maxActiveBlocks));
         spawnCountField = field(startX + half + 10, topY, half, String.valueOf(draft.spawnCount));
@@ -235,52 +244,55 @@ public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSele
         addDrawableChild(minYField);
         addDrawableChild(maxYField);
 
-        int spacingY = height < 220 ? topY + rowH * 3 : topY + rowH * 5 - 6;
-        int replaceY = topY + rowH * 3;
-        int modeY = topY + rowH * 4;
-
-        minDistanceField = field(startX, spacingY, half, String.valueOf(draft.minDistanceBetweenResources));
+        minDistanceField = field(startX, topY + rowH * 3, half, String.valueOf(draft.minDistanceBetweenResources));
         addDrawableChild(minDistanceField);
 
-        if (height >= 220) {
-            replaceModeButton = addDrawableChild(CyclingButtonWidget.<ReplaceMode>builder(v -> Text.literal(v.name()))
-                    .values(List.of(ReplaceMode.ONLY_TARGET_BLOCKS, ReplaceMode.AIR_OR_REPLACEABLE, ReplaceMode.TARGET_BLOCKS_OR_AIR))
-                    .initially(draft.replaceMode)
-                    .build(startX, replaceY, 240, 20, Text.literal("Replace Mode"), (b, v) -> {}));
-
-            restoreModeButton = addDrawableChild(CyclingButtonWidget.<RestoreMode>builder(v -> Text.literal(v.name()))
-                    .values(List.of(RestoreMode.RESTORE_ORIGINAL))
-                    .initially(draft.restoreMode)
-                    .build(startX, modeY, 240, 20, Text.literal("Restore Mode"), (b, v) -> {}));
-
-            placementModeButton = addDrawableChild(CyclingButtonWidget.<PlacementMode>builder(v -> Text.literal(v.name()))
-                    .values(List.of(PlacementMode.RANDOM_SCATTER))
-                    .initially(draft.placementMode)
-                    .build(startX + half + 10, modeY, 240, 20, Text.literal("Placement Mode"), (b, v) -> {}));
-        }
+        placementModeButton = addDrawableChild(CyclingButtonWidget.<PlacementMode>builder(v -> Text.literal(v.name()))
+                .values(List.of(PlacementMode.RANDOM_SCATTER))
+                .initially(draft.placementMode)
+                .build(startX + half + 10, topY + rowH * 3, half, 20, Text.literal("Placement Mode"), (b, v) -> {}));
     }
 
-    private void addSafetyPage(int startX, int topY) {
-        int rowH = layoutRows(7);
+    // Page 4: Modes — 5 rows
+    private void addModesPage(int startX, int topY) {
+        int rowH = layoutRows(5);
+        int half = Math.max(110, (contentW - 10) / 2);
 
-        restoreDelayField = field(startX, topY, 180, String.valueOf(draft.restoreDelaySeconds));
-        maxAttemptsField = field(startX + 200, topY, 180, String.valueOf(draft.maxPositionAttempts));
+        replaceModeButton = addDrawableChild(CyclingButtonWidget.<ReplaceMode>builder(v -> Text.literal(v.name()))
+                .values(List.of(ReplaceMode.ONLY_TARGET_BLOCKS, ReplaceMode.AIR_OR_REPLACEABLE, ReplaceMode.TARGET_BLOCKS_OR_AIR))
+                .initially(draft.replaceMode)
+                .build(startX, topY, contentW, 20, Text.literal("Replace Mode"), (b, v) -> {}));
+
+        restoreModeButton = addDrawableChild(CyclingButtonWidget.<RestoreMode>builder(v -> Text.literal(v.name()))
+                .values(List.of(RestoreMode.RESTORE_ORIGINAL))
+                .initially(draft.restoreMode)
+                .build(startX, topY + rowH, contentW, 20, Text.literal("Restore Mode"), (b, v) -> {}));
+
+        restoreDelayField = field(startX, topY + rowH * 2, half, String.valueOf(draft.restoreDelaySeconds));
+        maxAttemptsField = field(startX + half + 10, topY + rowH * 2, half, String.valueOf(draft.maxPositionAttempts));
         addDrawableChild(restoreDelayField);
         addDrawableChild(maxAttemptsField);
 
-        int toggleY = topY + rowH + 8;
-        requireLoadedButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.requireLoadedChunk)
-                .build(startX, toggleY, 220, 20, Text.literal("Require Loaded Chunk"), (b, v) -> {}));
-        respectProtectedButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.respectProtectedBlocks)
-                .build(startX, toggleY + rowH, 220, 20, Text.literal("Respect Protected Blocks"), (b, v) -> {}));
         dropOriginalButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.dropOriginalBlockOnReplace)
-                .build(startX, toggleY + rowH * 2, 220, 20, Text.literal("Drop Original On Replace"), (b, v) -> {}));
+                .build(startX, topY + rowH * 3, half, 20, Text.literal("Drop Original On Replace"), (b, v) -> {}));
         restoreIfNotMinedButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.restoreIfNotMined)
-                .build(startX, toggleY + rowH * 3, 220, 20, Text.literal("Restore If Not Mined"), (b, v) -> {}));
+                .build(startX + half + 10, topY + rowH * 3, half, 20, Text.literal("Restore If Not Mined"), (b, v) -> {}));
+    }
+
+    // Page 5: Safety — 4 rows
+    private void addSafetyPage(int startX, int topY) {
+        int rowH = layoutRows(4);
+        int half = Math.max(110, (contentW - 10) / 2);
+
+        requireLoadedButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.requireLoadedChunk)
+                .build(startX, topY, half, 20, Text.literal("Require Loaded Chunk"), (b, v) -> {}));
+        respectProtectedButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.respectProtectedBlocks)
+                .build(startX + half + 10, topY, half, 20, Text.literal("Respect Protected Blocks"), (b, v) -> {}));
+
         preventPlayerPlacedButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.preventPlayerPlacedBlocks)
-                .build(startX, toggleY + rowH * 4, 220, 20, Text.literal("Prevent Player Placed Blocks"), (b, v) -> {}));
+                .build(startX, topY + rowH, half, 20, Text.literal("Prevent Player Placed Blocks"), (b, v) -> {}));
         allowBlockEntitiesButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.allowBlockEntities)
-                .build(startX, toggleY + rowH * 5, 220, 20, Text.literal("Allow Block Entities"), (b, v) -> {}));
+                .build(startX + half + 10, topY + rowH, half, 20, Text.literal("Allow Block Entities"), (b, v) -> {}));
     }
 
     private int layoutRows(int requiredRows) {
@@ -316,11 +328,12 @@ public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSele
 
     private String pageLabel() {
         return switch (page) {
-            case 0 -> "Basics 1/5";
-            case 1 -> "Targets 2/5";
-            case 2 -> "Resources 3/5";
-            case 3 -> "Limits 4/5";
-            default -> "Safety 5/5";
+            case 0 -> "Basics 1/6";
+            case 1 -> "Targets 2/6";
+            case 2 -> "Resources 3/6";
+            case 3 -> "Limits 4/6";
+            case 4 -> "Modes 5/6";
+            default -> "Safety 6/6";
         };
     }
 
@@ -346,10 +359,10 @@ public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSele
 
         if (restoreDelayField != null) draft.restoreDelaySeconds = parseInt(restoreDelayField, draft.restoreDelaySeconds);
         if (maxAttemptsField != null) draft.maxPositionAttempts = parseInt(maxAttemptsField, draft.maxPositionAttempts);
-        if (requireLoadedButton != null) draft.requireLoadedChunk = requireLoadedButton.getValue();
-        if (respectProtectedButton != null) draft.respectProtectedBlocks = respectProtectedButton.getValue();
         if (dropOriginalButton != null) draft.dropOriginalBlockOnReplace = dropOriginalButton.getValue();
         if (restoreIfNotMinedButton != null) draft.restoreIfNotMined = restoreIfNotMinedButton.getValue();
+        if (requireLoadedButton != null) draft.requireLoadedChunk = requireLoadedButton.getValue();
+        if (respectProtectedButton != null) draft.respectProtectedBlocks = respectProtectedButton.getValue();
         if (preventPlayerPlacedButton != null) draft.preventPlayerPlacedBlocks = preventPlayerPlacedButton.getValue();
         if (allowBlockEntitiesButton != null) draft.allowBlockEntities = allowBlockEntitiesButton.getValue();
     }
@@ -395,14 +408,15 @@ public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSele
         super.render(context, mouseX, mouseY, delta);
 
         if (page == 0) {
+            int rowH = layoutRows(4);
             context.drawTextWithShadow(textRenderer, "Rule ID (read-only)", contentX, contentY - 11, ScreenTheme.TEXT_MUTED);
-            context.drawTextWithShadow(textRenderer, "Name", contentX, contentY + 40 - 11, ScreenTheme.TEXT_SECONDARY);
-            context.drawTextWithShadow(textRenderer, "Enabled", contentX, contentY + 80 - 11, ScreenTheme.TEXT_SECONDARY);
-            context.drawTextWithShadow(textRenderer, "Activation Mode", contentX + 150, contentY + 80 - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Name", contentX, contentY + rowH - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Enabled", contentX, contentY + rowH * 2 - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Activation Mode", contentX + Math.max(144, contentW / 2), contentY + rowH * 2 - 11, ScreenTheme.TEXT_SECONDARY);
         } else if (page == 1) {
             context.drawTextWithShadow(textRenderer, "Target Blocks", contentX, contentY - 11, ScreenTheme.TEXT_SECONDARY);
             String targets = draft.targetBlocks.isEmpty() ? "(none)" : String.join(", ", draft.targetBlocks);
-            ScreenLayout.drawWrapped(context, textRenderer, targets, contentX, contentY + 60, contentW, ScreenTheme.TEXT_SECONDARY);
+            ScreenLayout.drawWrapped(context, textRenderer, targets, contentX, contentY + layoutRows(3) * 2 + 4, contentW, ScreenTheme.TEXT_SECONDARY);
         } else if (page == 2) {
             context.drawTextWithShadow(textRenderer, "Resource Blocks", contentX, contentY - 11, ScreenTheme.TEXT_SECONDARY);
             context.drawTextWithShadow(textRenderer, "Weight", contentX + Math.max(160, contentW - 224) + 66, contentY - 11, ScreenTheme.TEXT_SECONDARY);
@@ -411,25 +425,37 @@ public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSele
                 if (sb.length() > 0) sb.append(", ");
                 sb.append(wb.block).append(" x").append(wb.weight);
             }
-            ScreenLayout.drawWrapped(context, textRenderer, sb.length() == 0 ? "(none)" : sb.toString(), contentX, contentY + 60, contentW, ScreenTheme.TEXT_SECONDARY);
+            ScreenLayout.drawWrapped(context, textRenderer, sb.length() == 0 ? "(none)" : sb.toString(), contentX, contentY + layoutRows(3) * 2 + 4, contentW, ScreenTheme.TEXT_SECONDARY);
         } else if (page == 3) {
-            int half = (contentW - 10) / 2;
+            int rowH = layoutRows(5);
+            int half = Math.max(110, (contentW - 10) / 2);
             int topY = contentY;
-            int rowH = layoutRows(6);
             context.drawTextWithShadow(textRenderer, "Max Active Blocks", contentX, topY - 11, ScreenTheme.TEXT_SECONDARY);
             context.drawTextWithShadow(textRenderer, "Spawn Count", contentX + half + 10, topY - 11, ScreenTheme.TEXT_SECONDARY);
             context.drawTextWithShadow(textRenderer, "Respawn Seconds", contentX, topY + rowH - 11, ScreenTheme.TEXT_SECONDARY);
             context.drawTextWithShadow(textRenderer, "Chance (0..1)", contentX + half + 10, topY + rowH - 11, ScreenTheme.TEXT_SECONDARY);
             context.drawTextWithShadow(textRenderer, "Min Y (blank = zone min)", contentX, topY + rowH * 2 - 11, ScreenTheme.TEXT_SECONDARY);
             context.drawTextWithShadow(textRenderer, "Max Y (blank = zone max)", contentX + half + 10, topY + rowH * 2 - 11, ScreenTheme.TEXT_SECONDARY);
-            int spacingLabelY = height < 220 ? topY + rowH * 3 - 11 : topY + rowH * 5 - 12;
-            context.drawTextWithShadow(textRenderer, "Spacing", contentX, spacingLabelY, ScreenTheme.TEXT_SECONDARY);
-            if (height >= 240) {
-                context.drawTextWithShadow(textRenderer, "RANDOM_SCATTER, min distance between resources.", contentX, topY + rowH * 5 + 18, ScreenTheme.TEXT_MUTED);
-            }
+            context.drawTextWithShadow(textRenderer, "Min Distance", contentX, topY + rowH * 3 - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Placement Mode", contentX + half + 10, topY + rowH * 3 - 11, ScreenTheme.TEXT_SECONDARY);
         } else if (page == 4) {
-            context.drawTextWithShadow(textRenderer, "Restore Delay Seconds", contentX, contentY - 11, ScreenTheme.TEXT_SECONDARY);
-            context.drawTextWithShadow(textRenderer, "Max Position Attempts", contentX + 200, contentY - 11, ScreenTheme.TEXT_SECONDARY);
+            int rowH = layoutRows(5);
+            int half = Math.max(110, (contentW - 10) / 2);
+            int topY = contentY;
+            context.drawTextWithShadow(textRenderer, "Replace Mode", contentX, topY - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Restore Mode", contentX, topY + rowH - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Restore Delay Seconds", contentX, topY + rowH * 2 - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Max Position Attempts", contentX + half + 10, topY + rowH * 2 - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Drop Original On Replace", contentX, topY + rowH * 3 - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Restore If Not Mined", contentX + half + 10, topY + rowH * 3 - 11, ScreenTheme.TEXT_SECONDARY);
+        } else if (page == 5) {
+            int rowH = layoutRows(4);
+            int half = Math.max(110, (contentW - 10) / 2);
+            int topY = contentY;
+            context.drawTextWithShadow(textRenderer, "Require Loaded Chunk", contentX, topY - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Respect Protected Blocks", contentX + half + 10, topY - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Prevent Player Placed Blocks", contentX, topY + rowH - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Allow Block Entities", contentX + half + 10, topY + rowH - 11, ScreenTheme.TEXT_SECONDARY);
         }
 
         if (!error.isBlank()) {
