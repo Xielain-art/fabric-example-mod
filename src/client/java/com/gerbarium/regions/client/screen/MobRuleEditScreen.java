@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MobRuleEditScreen extends GerbariumScreen implements EntitySelectionConsumer {
-    private static final int PAGE_COUNT = 4;
+    private static final int PAGE_COUNT = 5;
 
     private final String zoneId;
     private MobRule draft;
@@ -74,6 +74,7 @@ public class MobRuleEditScreen extends GerbariumScreen implements EntitySelectio
             case 0 -> HelpTopic.MOB_RULE_BASICS;
             case 1 -> HelpTopic.MOB_RULE_SPAWN;
             case 2 -> HelpTopic.MOB_RULE_PLACEMENT;
+            case 3 -> HelpTopic.MOB_RULE_BOUNDARY;
             default -> HelpTopic.MOB_RULE_ADVANCED;
         };
         setHelpTopic(topic);
@@ -108,12 +109,15 @@ public class MobRuleEditScreen extends GerbariumScreen implements EntitySelectio
         } else if (page == 2) {
             addPlacementPage(contentX, topY);
         } else if (page == 3) {
+            addBoundaryPage(contentX, topY);
+        } else if (page == 4) {
             addAdvancedPage(contentX, topY);
         }
     }
 
+    // Page 0: Basics - 4 rows
     private void addBaseFields(int startX, int topY) {
-        int rowH = compactRowH();
+        int rowH = layoutRows(4);
 
         ruleNameField = field(startX, topY, Math.max(180, contentW - 130), draft.name == null ? "" : draft.name);
         addDrawableChild(ruleNameField);
@@ -136,19 +140,11 @@ public class MobRuleEditScreen extends GerbariumScreen implements EntitySelectio
                     draft.spawnType = v;
                     init();
                 }));
-
-        int boundaryY = topY + rowH * 3;
-        String boundaryText = "Boundary: " + boundarySummary();
-        addDrawableChild(ButtonWidget.builder(Text.literal(boundaryText), b -> {})
-                .dimensions(startX, boundaryY, Math.max(180, contentW - 102), 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Edit"), b -> {
-            capture();
-            client.setScreen(new MobRuleBoundarySettingsScreen(this, draft));
-        }).dimensions(startX + Math.max(184, contentW - 96), boundaryY, 96, 20).build());
     }
 
+    // Page 1: Spawn - 6 rows
     private void addSpawnPage(int startX, int topY) {
-        int rowH = compactRowH();
+        int rowH = layoutRows(6);
         int half = Math.max(110, (contentW - 8) / 2);
 
         refillModeButton = addDrawableChild(CyclingButtonWidget.<RefillMode>builder(v -> Text.literal(v.name()))
@@ -187,8 +183,9 @@ public class MobRuleEditScreen extends GerbariumScreen implements EntitySelectio
                 .build(startX + half + 8, y6, half, 20, Text.literal("Respawn After Despawn"), (b, v) -> {}));
     }
 
+    // Page 2: Placement - 6 rows
     private void addPlacementPage(int startX, int topY) {
-        int rowH = compactRowH();
+        int rowH = layoutRows(6);
         int third = Math.max(70, (contentW - 16) / 3);
         int half = Math.max(110, (contentW - 8) / 2);
 
@@ -243,8 +240,32 @@ public class MobRuleEditScreen extends GerbariumScreen implements EntitySelectio
                 .build(startX + half + 8, y5, half, 20, Text.literal("Allow Force Load"), (b, v) -> {}));
     }
 
+    // Page 3: Boundary & Safety - 3 rows
+    private void addBoundaryPage(int startX, int topY) {
+        int rowH = layoutRows(3);
+        int half = Math.max(110, (contentW - 8) / 2);
+
+        // Boundary summary + edit button
+        String boundaryText = "Boundary: " + boundarySummary();
+        addDrawableChild(ButtonWidget.builder(Text.literal(boundaryText), b -> {})
+                .dimensions(startX, topY, Math.max(180, contentW - 102), 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Edit"), b -> {
+            capture();
+            client.setScreen(new MobRuleBoundarySettingsScreen(this, draft));
+        }).dimensions(startX + Math.max(184, contentW - 96), topY, 96, 20).build());
+
+        // Despawn
+        despawnButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.despawnWhenZoneInactive)
+                .build(startX, topY + rowH, contentW, 20, Text.literal("Despawn When Zone Inactive"), (b, v) -> {}));
+
+        // Announce
+        announceButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.announceOnSpawn)
+                .build(startX, topY + rowH * 2, contentW, 20, Text.literal("Announce On Spawn"), (b, v) -> {}));
+    }
+
+    // Page 4: Advanced - 3 rows
     private void addAdvancedPage(int startX, int topY) {
-        int rowH = compactRowH();
+        int rowH = layoutRows(3);
         int companionCount = draft.companions == null ? 0 : draft.companions.size();
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Edit Companions"), b -> {
@@ -256,18 +277,13 @@ public class MobRuleEditScreen extends GerbariumScreen implements EntitySelectio
         addDrawableChild(ButtonWidget.builder(Text.literal("Companions: " + companionCount), b -> {})
                 .dimensions(startX + 188, topY, 140, 20).build());
 
+        // ID
         addDrawableChild(ButtonWidget.builder(Text.literal("ID"), b -> {})
                 .dimensions(startX, topY + rowH, 80, 20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal(draft.id == null ? "" : draft.id), b -> {})
                 .dimensions(startX + 84, topY + rowH, Math.max(180, contentW - 84), 20).build());
 
-        despawnButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.despawnWhenZoneInactive)
-                .build(startX, topY + rowH * 2, contentW, 20, Text.literal("Despawn When Zone Inactive"), (b, v) -> {}));
-
-        announceButton = addDrawableChild(CyclingButtonWidget.onOffBuilder(draft.announceOnSpawn)
-                .build(startX, topY + rowH * 3, contentW, 20, Text.literal("Announce On Spawn"), (b, v) -> {}));
-
-        int presetY = topY + rowH * 4;
+        // Boss Preset
         addDrawableChild(ButtonWidget.builder(Text.literal("Boss Preset"), b -> {
             capture();
             draft.spawnType = SpawnType.UNIQUE;
@@ -281,11 +297,15 @@ public class MobRuleEditScreen extends GerbariumScreen implements EntitySelectio
             draft.respawnAfterDeath = true;
             draft.afterDeathDelaySeconds = 30;
             init();
-        }).dimensions(startX, presetY, contentW, 20).build());
+        }).dimensions(startX, topY + rowH * 2, contentW, 20).build());
     }
 
-    private int compactRowH() {
-        return height < 220 ? 22 : 30;
+    private int layoutRows(int requiredRows) {
+        int available = footerY - contentY - 20;
+        int preferred = height < 220 ? 26 : 30;
+        if (requiredRows <= 0) return preferred;
+        int calculated = available / requiredRows;
+        return Math.max(24, Math.min(preferred, calculated));
     }
 
     private TextFieldWidget field(int x, int y, int w, String value) {
@@ -296,10 +316,11 @@ public class MobRuleEditScreen extends GerbariumScreen implements EntitySelectio
 
     private String pageLabel() {
         return switch (page) {
-            case 0 -> "Basics 1/4";
-            case 1 -> "Spawn 2/4";
-            case 2 -> "Placement 3/4";
-            default -> "Advanced 4/4";
+            case 0 -> "Basics 1/5";
+            case 1 -> "Spawn 2/5";
+            case 2 -> "Placement 3/5";
+            case 3 -> "Boundary 4/5";
+            default -> "Advanced 5/5";
         };
     }
 
@@ -385,15 +406,14 @@ public class MobRuleEditScreen extends GerbariumScreen implements EntitySelectio
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
 
-        int rowH = compactRowH();
-
         if (page == 0) {
+            int rowH = layoutRows(4);
             context.drawTextWithShadow(textRenderer, "Rule Name", contentX, contentY - 11, ScreenTheme.TEXT_SECONDARY);
             context.drawTextWithShadow(textRenderer, "Entity", contentX, contentY + rowH - 11, ScreenTheme.TEXT_SECONDARY);
             context.drawTextWithShadow(textRenderer, "Enabled", contentX, contentY + rowH * 2 - 11, ScreenTheme.TEXT_SECONDARY);
             context.drawTextWithShadow(textRenderer, "Spawn Type", contentX + Math.max(144, contentW / 2), contentY + rowH * 2 - 11, ScreenTheme.TEXT_SECONDARY);
-            context.drawTextWithShadow(textRenderer, "Boundary Control", contentX, contentY + rowH * 3 - 11, ScreenTheme.TEXT_SECONDARY);
         } else if (page == 1) {
+            int rowH = layoutRows(6);
             int half = Math.max(110, (contentW - 8) / 2);
             int topY = contentY;
             context.drawTextWithShadow(textRenderer, "Refill Mode", contentX, topY - 11, ScreenTheme.TEXT_SECONDARY);
@@ -407,6 +427,7 @@ public class MobRuleEditScreen extends GerbariumScreen implements EntitySelectio
             context.drawTextWithShadow(textRenderer, "Respawn After Death", contentX, topY + rowH * 5 - 11, ScreenTheme.TEXT_SECONDARY);
             context.drawTextWithShadow(textRenderer, "Respawn After Despawn", contentX + half + 8, topY + rowH * 5 - 11, ScreenTheme.TEXT_SECONDARY);
         } else if (page == 2) {
+            int rowH = layoutRows(6);
             int third = Math.max(70, (contentW - 16) / 3);
             int half = Math.max(110, (contentW - 8) / 2);
             int topY = contentY;
@@ -422,13 +443,18 @@ public class MobRuleEditScreen extends GerbariumScreen implements EntitySelectio
             context.drawTextWithShadow(textRenderer, "Player Range", contentX + half + 8, topY + rowH * 4 - 11, ScreenTheme.TEXT_SECONDARY);
             context.drawTextWithShadow(textRenderer, "Require Chunk Loaded", contentX, topY + rowH * 5 - 11, ScreenTheme.TEXT_SECONDARY);
             context.drawTextWithShadow(textRenderer, "Allow Force Load", contentX + half + 8, topY + rowH * 5 - 11, ScreenTheme.TEXT_SECONDARY);
-        } else {
+        } else if (page == 3) {
+            int rowH = layoutRows(3);
             int topY = contentY;
-            int rowHLocal = compactRowH();
+            context.drawTextWithShadow(textRenderer, "Boundary Control", contentX, topY - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Despawn When Zone Inactive", contentX, topY + rowH - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Announce On Spawn", contentX, topY + rowH * 2 - 11, ScreenTheme.TEXT_SECONDARY);
+        } else {
+            int rowH = layoutRows(3);
+            int topY = contentY;
             context.drawTextWithShadow(textRenderer, "Companions", contentX, topY - 11, ScreenTheme.TEXT_SECONDARY);
-            context.drawTextWithShadow(textRenderer, "ID", contentX, topY + rowHLocal - 11, ScreenTheme.TEXT_MUTED);
-            context.drawTextWithShadow(textRenderer, "Despawn When Zone Inactive", contentX, topY + rowHLocal * 2 - 11, ScreenTheme.TEXT_SECONDARY);
-            context.drawTextWithShadow(textRenderer, "Announce On Spawn", contentX, topY + rowHLocal * 3 - 11, ScreenTheme.TEXT_SECONDARY);
+            context.drawTextWithShadow(textRenderer, "Rule ID", contentX, topY + rowH - 11, ScreenTheme.TEXT_MUTED);
+            context.drawTextWithShadow(textRenderer, "Boss Preset", contentX, topY + rowH * 2 - 11, ScreenTheme.TEXT_SECONDARY);
         }
 
         if (!error.isBlank()) {

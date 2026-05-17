@@ -218,7 +218,7 @@ public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSele
 
     private void addLimitsPage(int startX, int topY) {
         int half = (contentW - 10) / 2;
-        int rowH = compactRowH();
+        int rowH = layoutRows(6);
 
         maxActiveField = field(startX, topY, half, String.valueOf(draft.maxActiveBlocks));
         spawnCountField = field(startX + half + 10, topY, half, String.valueOf(draft.spawnCount));
@@ -261,7 +261,7 @@ public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSele
     }
 
     private void addSafetyPage(int startX, int topY) {
-        int rowH = compactRowH();
+        int rowH = layoutRows(7);
 
         restoreDelayField = field(startX, topY, 180, String.valueOf(draft.restoreDelaySeconds));
         maxAttemptsField = field(startX + 200, topY, 180, String.valueOf(draft.maxPositionAttempts));
@@ -283,8 +283,12 @@ public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSele
                 .build(startX, toggleY + rowH * 5, 220, 20, Text.literal("Allow Block Entities"), (b, v) -> {}));
     }
 
-    private int compactRowH() {
-        return height < 220 ? 24 : 32;
+    private int layoutRows(int requiredRows) {
+        int available = footerY - contentY - 20;
+        int preferred = height < 220 ? 26 : 32;
+        if (requiredRows <= 0) return preferred;
+        int calculated = available / requiredRows;
+        return Math.max(24, Math.min(preferred, calculated));
     }
 
     private TextFieldWidget field(int x, int y, int w, String value) {
@@ -411,7 +415,7 @@ public class ResourceRuleEditScreen extends GerbariumScreen implements BlockSele
         } else if (page == 3) {
             int half = (contentW - 10) / 2;
             int topY = contentY;
-            int rowH = compactRowH();
+            int rowH = layoutRows(6);
             context.drawTextWithShadow(textRenderer, "Max Active Blocks", contentX, topY - 11, ScreenTheme.TEXT_SECONDARY);
             context.drawTextWithShadow(textRenderer, "Spawn Count", contentX + half + 10, topY - 11, ScreenTheme.TEXT_SECONDARY);
             context.drawTextWithShadow(textRenderer, "Respawn Seconds", contentX, topY + rowH - 11, ScreenTheme.TEXT_SECONDARY);
